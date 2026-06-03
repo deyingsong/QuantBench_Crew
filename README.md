@@ -8,7 +8,7 @@ It is designed to help researchers move from paper discovery to method extractio
 
 This repository contains an initial runnable backbone:
 
-- Agent classes for scouting, reading, ERA-backed coding, benchmarking, and reviewing papers.
+- Agent classes for scouting, PaperQA2-backed reading, ERA-backed coding, benchmarking, and reviewing papers.
 - Tooling for loading paper metadata, parsing paper-like records, running local commands, and evaluating benchmark results.
 - YAML/JSON configuration loading.
 - A command-line entry point for a dry workflow.
@@ -43,6 +43,18 @@ The coder agent uses an ERA-style Flat UCB Tree Search adapter with deterministi
 QuantBench generators and scoring, so it stays runnable without Gemini or other
 LLM credentials. Live ERA generation and sandbox execution can be connected
 behind the same `generate_fn` and `execute_fn` interface later.
+
+The reader agent uses PaperQA2 when the optional package and local document paths
+are available. PaperQA2 currently requires Python 3.11+:
+
+```bash
+pip install -e ".[paperqa]"
+```
+
+Local paper JSON records can provide files with `path`, `file_path`,
+`pdf_path`, `document_path`, or `document_paths`. When PaperQA2 is unavailable
+or no local files are provided, the reader falls back to metadata extraction so
+the dry workflow remains runnable.
 
 ## Run
 

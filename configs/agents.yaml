@@ -9,7 +9,9 @@ agents:
       - risk
       - machine learning
   quant_reader:
-    role: Paper summarization and method extraction
+    role: PaperQA2-backed paper summarization and method extraction
+    rag_backbone: PaperQA2
+    fallback: metadata extraction
     extraction_fields:
       - research_question
       - proposed_method

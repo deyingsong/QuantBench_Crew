@@ -31,6 +31,9 @@ dependencies = [
 dev = [
   "pytest>=8.0",
 ]
+paperqa = [
+  "paper-qa>=5; python_version >= '3.11'",
+]
 
 [project.scripts]
 quantbench = "quantbench_crew.main:main"
