@@ -18,7 +18,9 @@ agents:
       - metrics
       - limitations
   quant_coder:
-    role: Reproducible implementation planning
+    role: ERA-backed reproducible implementation planning
+    search_algorithm: Flat UCB Tree Search
+    deterministic_adapter: true
     output_sections:
       - modules
       - assumptions

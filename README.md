@@ -8,7 +8,7 @@ It is designed to help researchers move from paper discovery to method extractio
 
 This repository contains an initial runnable backbone:
 
-- Agent classes for scouting, reading, coding, benchmarking, and reviewing papers.
+- Agent classes for scouting, reading, ERA-backed coding, benchmarking, and reviewing papers.
 - Tooling for loading paper metadata, parsing paper-like records, running local commands, and evaluating benchmark results.
 - YAML/JSON configuration loading.
 - A command-line entry point for a dry workflow.
@@ -38,6 +38,11 @@ REPORT_DIR=./reports
 ```
 
 The first version does not require an API key for the dry workflow.
+
+The coder agent uses an ERA-style Flat UCB Tree Search adapter with deterministic
+QuantBench generators and scoring, so it stays runnable without Gemini or other
+LLM credentials. Live ERA generation and sandbox execution can be connected
+behind the same `generate_fn` and `execute_fn` interface later.
 
 ## Run
 
