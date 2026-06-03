@@ -1,0 +1,14 @@
+benchmarks:
+  default:
+    dataset: sample_returns
+    metrics:
+      - mean_return
+      - volatility
+      - sharpe
+      - max_drawdown
+    baselines:
+      - equal_weight
+      - zero_return
+    periods:
+      train: "2015-01-01:2020-12-31"
+      test: "2021-01-01:2024-12-31"

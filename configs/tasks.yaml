@@ -1,0 +1,16 @@
+tasks:
+  scout:
+    description: Find and rank papers relevant to quantitative finance research.
+    expected_output: A prioritized paper queue with relevance scores.
+  read:
+    description: Extract method, assumptions, data, and empirical claims from each paper.
+    expected_output: Structured paper analysis.
+  code:
+    description: Produce an implementation plan and reproducibility notes.
+    expected_output: Implementation plan with modules, assumptions, and tests.
+  bench:
+    description: Evaluate methods or benchmark placeholders against baseline metrics.
+    expected_output: Benchmark result records.
+  review:
+    description: Compare claims, implementation notes, and benchmark results.
+    expected_output: Final structured research review.

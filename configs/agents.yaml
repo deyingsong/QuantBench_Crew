@@ -1,0 +1,39 @@
+agents:
+  quant_scout:
+    role: Paper discovery and relevance ranking
+    default_keywords:
+      - asset pricing
+      - portfolio
+      - market microstructure
+      - forecasting
+      - risk
+      - machine learning
+  quant_reader:
+    role: Paper summarization and method extraction
+    extraction_fields:
+      - research_question
+      - proposed_method
+      - assumptions
+      - datasets
+      - metrics
+      - limitations
+  quant_coder:
+    role: Reproducible implementation planning
+    output_sections:
+      - modules
+      - assumptions
+      - tests
+      - open_questions
+  quant_bench:
+    role: Benchmark evaluation and robustness checks
+    default_metrics:
+      - mean_return
+      - volatility
+      - sharpe
+      - max_drawdown
+  quant_reviewer:
+    role: Research synthesis and final review
+    verdicts:
+      - promising
+      - inconclusive
+      - weak
