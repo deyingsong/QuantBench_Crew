@@ -33,7 +33,7 @@ class PaperQA2Client:
     def create_if_available(cls) -> "PaperQA2Client | None":
         try:
             return cls()
-        except RuntimeError:
+        except (RuntimeError, OSError):
             return None
 
     def analyze(self, paper: Paper) -> str | None:
@@ -43,7 +43,7 @@ class PaperQA2Client:
 
         docs = self._docs_cls()
         for path in paths:
-            docs.add(str(path))
+            docs.add(str(path), settings=self._settings)
 
         session = docs.query(_paperqa_question(paper), settings=self._settings)
         return _answer_text(session)
@@ -58,10 +58,16 @@ class QuantReaderAgent:
         use_paperqa: bool = True,
     ) -> None:
         self.paperqa_client = paperqa_client
-        if self.paperqa_client is None and use_paperqa:
-            self.paperqa_client = PaperQA2Client.create_if_available()
+        self.use_paperqa = use_paperqa
 
     def analyze(self, paper: Paper) -> PaperAnalysis:
+        if (
+            self.paperqa_client is None
+            and self.use_paperqa
+            and document_paths_for_paper(paper)
+        ):
+            self.paperqa_client = PaperQA2Client.create_if_available()
+
         paperqa_answer = (
             self.paperqa_client.analyze(paper) if self.paperqa_client is not None else None
         )

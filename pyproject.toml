@@ -7,7 +7,7 @@ name = "quantbench-crew"
 version = "0.1.0"
 description = "Multi-agent research assistant for quantitative finance paper benchmarking."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 authors = [
   { name = "QuantBench Crew Contributors" }
 ]
@@ -17,10 +17,9 @@ classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
@@ -32,7 +31,7 @@ dev = [
   "pytest>=8.0",
 ]
 paperqa = [
-  "paper-qa>=5; python_version >= '3.11'",
+  "paper-qa>=5,<2027",
 ]
 
 [project.scripts]

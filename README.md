@@ -16,9 +16,17 @@ This repository contains an initial runnable backbone:
 
 ## Install
 
+PaperQA2 requires Python 3.11+, so the recommended setup is the conda
+environment in this repo:
+
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+conda env create -f environment.yml
+conda activate quantbench-crew
+```
+
+For a lighter environment without PaperQA2, use any Python 3.11+ environment:
+
+```bash
 pip install -e ".[dev]"
 ```
 

@@ -1,0 +1,12 @@
+name: quantbench-crew
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip>=24
+  - setuptools>=69
+  - wheel
+  - pyyaml>=6.0.1
+  - pytest>=8.0
+  - pip:
+      - -e .[paperqa]
