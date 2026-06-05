@@ -51,6 +51,21 @@ def parse_cookies_from_browser(value: str | None) -> tuple[str, str | None, str 
     return (browser_name.lower(), profile, keyring.upper() if keyring else None, container)
 
 
+def extract_video_id(video_url: str) -> str:
+    """Extract a YouTube video ID from a watch, short, or youtu.be URL."""
+    patterns = [
+        r"(?:v=)([A-Za-z0-9_-]{11})",
+        r"(?:youtu\.be/)([A-Za-z0-9_-]{11})",
+        r"(?:shorts/)([A-Za-z0-9_-]{11})",
+        r"^([A-Za-z0-9_-]{11})$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, video_url)
+        if match:
+            return match.group(1)
+    raise ValueError(f"Could not extract a YouTube video ID from: {video_url}")
+
+
 def sanitize_filename(value: str, max_length: int = 90) -> str:
     """Return a filesystem-safe filename stem."""
     value = html.unescape(value or "untitled")
@@ -147,8 +162,7 @@ def get_transcript_via_api(video_id: str, languages: list[str]) -> TranscriptRes
     return TranscriptResult(language=language, source="youtube-transcript-api", text=text)
 
 
-def get_video_info(
-    video_url: str,
+def ytdlp_options(
     allow_remote_components: bool,
     cookies_file: str | None,
     cookies_from_browser: str | None,
@@ -171,6 +185,20 @@ def get_video_info(
         ydl_opts["cookiefile"] = cookies_file
     if cookies_from_browser:
         ydl_opts["cookiesfrombrowser"] = parse_cookies_from_browser(cookies_from_browser)
+    return ydl_opts
+
+
+def get_video_info(
+    video_url: str,
+    allow_remote_components: bool,
+    cookies_file: str | None,
+    cookies_from_browser: str | None,
+) -> dict[str, Any]:
+    ydl_opts = ytdlp_options(
+        allow_remote_components=allow_remote_components,
+        cookies_file=cookies_file,
+        cookies_from_browser=cookies_from_browser,
+    )
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         return ydl.extract_info(video_url, download=False) or {}
 
@@ -194,6 +222,11 @@ def subtitle_candidates(video_info: dict[str, Any], languages: Iterable[str]) ->
 def fetch_url(url: str) -> str:
     request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read().decode("utf-8", errors="replace")
+
+
+def fetch_url_with_ytdlp(ydl: yt_dlp.YoutubeDL, url: str) -> str:
+    with ydl.urlopen(url) as response:
         return response.read().decode("utf-8", errors="replace")
 
 
@@ -253,26 +286,27 @@ def get_transcript_via_ytdlp(
     cookies_file: str | None = None,
     cookies_from_browser: str | None = None,
 ) -> TranscriptResult:
-    video_info = get_video_info(
-        video_url,
+    ydl_opts = ytdlp_options(
         allow_remote_components=allow_remote_components,
         cookies_file=cookies_file,
         cookies_from_browser=cookies_from_browser,
     )
-    for language, ext, url in subtitle_candidates(video_info, languages):
-        data = fetch_url(url)
-        if ext == "json3":
-            items = parse_json3(data)
-        elif ext == "vtt":
-            items = parse_vtt(data)
-        elif ext == "ttml":
-            items = parse_ttml(data)
-        else:
-            items = parse_srv3(data)
-        text = transcript_items_to_text(items)
-        if text:
-            return TranscriptResult(language=language, source=f"yt-dlp-{ext}", text=text)
-    raise NoTranscriptFound(video_info.get("id", video_url), languages, {})
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        video_info = ydl.extract_info(video_url, download=False) or {}
+        for language, ext, url in subtitle_candidates(video_info, languages):
+            data = fetch_url_with_ytdlp(ydl, url)
+            if ext == "json3":
+                items = parse_json3(data)
+            elif ext == "vtt":
+                items = parse_vtt(data)
+            elif ext == "ttml":
+                items = parse_ttml(data)
+            else:
+                items = parse_srv3(data)
+            text = transcript_items_to_text(items)
+            if text:
+                return TranscriptResult(language=language, source=f"yt-dlp-{ext}", text=text)
+        raise NoTranscriptFound(video_info.get("id", video_url), languages, {})
 
 
 def transcript_items_to_text(items: Iterable[dict[str, Any]]) -> str:
@@ -336,6 +370,7 @@ def write_index(index_path: Path, rows: list[dict[str, Any]]) -> None:
 
 def scrape_channel(
     channel_url: str,
+    video_url: str | None,
     output_dir: Path,
     languages: list[str],
     sleep_seconds: float,
@@ -347,11 +382,24 @@ def scrape_channel(
     cookies_from_browser: str | None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Fetching video list from {channel_url}")
-    videos = get_channel_videos(channel_url)
-    if limit is not None:
-        videos = videos[:limit]
-    print(f"Found {len(videos)} public video entries.")
+    if video_url:
+        video_id = extract_video_id(video_url)
+        videos = [
+            {
+                "id": video_id,
+                "title": f"YouTube video {video_id}",
+                "url": f"https://www.youtube.com/watch?v={video_id}",
+                "duration": None,
+                "upload_date": None,
+            }
+        ]
+        print(f"Using single video: {videos[0]['url']}")
+    else:
+        print(f"Fetching video list from {channel_url}")
+        videos = get_channel_videos(channel_url)
+        if limit is not None:
+            videos = videos[:limit]
+        print(f"Found {len(videos)} public video entries.")
 
     rows: list[dict[str, Any]] = []
     success_count = 0
@@ -475,6 +523,7 @@ def scrape_channel(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--channel-url", default=DEFAULT_CHANNEL_URL)
+    parser.add_argument("--video-url", default=None, help="Scrape one video instead of a channel.")
     parser.add_argument("--output-dir", default="chat_with_traders_transcripts")
     parser.add_argument("--languages", nargs="+", default=["en", "en-US", "en-GB"])
     parser.add_argument("--sleep-seconds", type=float, default=1.5)
@@ -504,6 +553,7 @@ def main() -> None:
     args = parse_args()
     scrape_channel(
         channel_url=args.channel_url,
+        video_url=args.video_url,
         output_dir=Path(args.output_dir),
         languages=args.languages,
         sleep_seconds=args.sleep_seconds,
