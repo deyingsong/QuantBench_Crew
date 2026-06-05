@@ -91,6 +91,10 @@ export async function setupCwtNotebookLm({
       create = tab.playwright.getByRole("button", { name: "Create new notebook" });
       count = await create.count();
     }
+    if (count !== 1) {
+      create = tab.playwright.locator('button:has-text("Create notebook")');
+      count = await create.count();
+    }
     if (count < 1) {
       throw new Error(`Create notebook count during recovery: ${count}\n${await snapshotText(4000)}`);
     }
@@ -149,10 +153,20 @@ export async function setupCwtNotebookLm({
     }
     await ensureSourcesList();
     const add = tab.playwright.getByRole("button", { name: "Add source" });
-    if ((await add.count()) !== 1) {
+    let addCount = await add.count();
+    let addTarget = add;
+    if (addCount !== 1) {
+      addTarget = tab.playwright.getByRole("button", { name: "Add sources" });
+      addCount = await addTarget.count();
+    }
+    if (addCount !== 1) {
+      addTarget = tab.playwright.locator('button:has-text("Add sources")');
+      addCount = await addTarget.count();
+    }
+    if (addCount !== 1) {
       throw new Error(`Add source unavailable\n${await snapshotText(4000)}`);
     }
-    await add.click({});
+    await addTarget.click({});
     await tab.playwright.waitForTimeout(900);
     const websites = tab.playwright.getByRole("button", { name: "Websites" });
     if ((await websites.count()) !== 1) {
