@@ -147,7 +147,7 @@ export async function setupCwtNotebookLm({ tab, nodeRepl }) {
     if (!(await insert.isEnabled())) throw new Error(`Insert disabled for ${video.url}`);
     await insert.click({});
 
-    const deadline = Date.now() + 60000;
+    const deadline = Date.now() + 45000;
     let last = "";
     while (Date.now() < deadline) {
       await tab.playwright.waitForTimeout(3000);
