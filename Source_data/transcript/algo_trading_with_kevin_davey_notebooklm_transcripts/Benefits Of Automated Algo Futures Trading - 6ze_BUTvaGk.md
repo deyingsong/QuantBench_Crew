@@ -1,0 +1,15 @@
+---
+title: "Benefits Of Automated Algo Futures Trading"
+video_id: "6ze_BUTvaGk"
+url: "https://www.youtube.com/watch?v=6ze_BUTvaGk"
+duration: "3:54"
+source: "NotebookLM YouTube transcript import"
+---
+
+# Benefits Of Automated Algo Futures Trading
+
+[Watch on YouTube](https://www.youtube.com/watch?v=6ze_BUTvaGk)
+
+## Transcript
+
+hi i'm champion trader kevin davey and today i'm going to talk to you about some of the benefits of futures trading algo trading and automation which can all be the same so let's get started so in this video i'm going to give you a couple of the benefits that i see in automated algo futures trading these aren't all the benefits if you want to read up on all the benefits i see go to the article that's in the description and you'll get all of them but today i'd just like to focus on two of them the first one is the futures market is a 24 hour market or actually 23 hours if you want to be precise but compared to the stock market a lot more hours overnight hours those are sometimes important let's say some event happens in the middle of the night well in stocks you have to wait till the next open before you can take any action but in futures you can buy and sell in the middle of the night if you want and that's a big deal you can react and your algo can react a lot quicker to any kind of price fluctuations that happen overnight and as an added benefit you could actually create strategies that only work overnight you might have seen some reports on research done that says hey most of the movement lately in the stock market's been overnight well you could test it out and see if that's true and you could actually just trade overnight and not even trade during the day so having a 24-hour market is really a nice way to get more opportunities to trade and to not get caught in case something bad happens or at least you eliminate you minimize the damage with such an event or you can take advantage of it even and then the second big benefit of futures trading and in specific automated algo trading is you can trade a lot of markets what i mean by that is you don't have to focus on one or two stocks like you would if you were staring at a chart all day you can trade 10 20 30 different markets with automated algos all you have to do is create strategies for each one but once you do you can set them up and let them run and the computer will execute the buy and sell decisions so that means you can trade crude oil you can trade gold soybeans wheat cotton currencies interest rates all sorts of different markets and you can have a diversified portfolio that way and that really becomes a key to successful futures algo trading so those are just two of the benefits of automated algo trading with futures as i mentioned click on the link in the article and you can read a whole lot more if you like this video give it a thumbs up subscribe to my channel and feel free leave a comment i'd love to hear from you i'm champion trader kevin davey have a great day you

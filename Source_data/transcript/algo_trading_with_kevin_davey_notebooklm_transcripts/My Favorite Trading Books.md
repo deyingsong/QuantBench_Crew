@@ -1,0 +1,15 @@
+---
+title: "My Favorite Trading Books"
+video_id: "lhIVGDPtyZg"
+url: "https://www.youtube.com/watch?v=lhIVGDPtyZg"
+duration: "3:58"
+source: "NotebookLM YouTube transcript import"
+---
+
+# My Favorite Trading Books
+
+[Watch on YouTube](https://www.youtube.com/watch?v=lhIVGDPtyZg)
+
+## Transcript
+
+hi there this is champion trader kevin davey and today i'm going to talk about three of my general trading books so let's get started let's jump right into it the first book that's general trading knowledge that i really like is the universal principles of successful trading by brent penfold this is a terrific book that covers a whole ton of topics it goes from strategy building to money management to psychology there's a little bit of everything in it and brent does a great job of describing it there's also some interviews and some chapters by traders so you can get insights from other people too all in all it's a great trading book i highly recommend everybody get it the second book on the list is probably the most famous one and it's called market wizards if i can hold it up correctly there we go this book is the first one in a series written by jack schwager and what he's done is interviewed top traders and really got in depth on what they do how they do it now it's not going to give you oh hey use the macd and that will give you a good strategy kind of thing but it will give you general insight into how traders think and kind of the things they do one of the interesting things i found was that everybody seemed to have success doing something different they didn't all necessarily do the same thing like trend following or trade a few certain futures market and that kind of thing it's a really good book it's the first one in a series as i mentioned the other books in the series are pretty good too and in fact there's actually a student of mine and one of the later books read the whole series you won't be disappointed and the final book that i think is just really good for general trading knowledge especially in futures is this book of trader's first book on commodities written by carly garner and carly does a great job of describing the futures market because it's kind of complicated there's first notice days last trading days in some markets the first notice date comes before the last trading day there's deliverable contracts there's electro electronically settled contracts there's different months for different futures there's a whole bunch of things that if you don't really know futures this book will really help you out and really make you a better futures trader i recommend it and i think for a beginner this is one of the best books out there so those are three trading books that are general more general in nature that i found a lot of benefit out of what about you what have you liked leave a comment let me know if i've read it i'll comment too if you really like the video hit the like button and don't forget to subscribe to my channel i'll keep making videos that way this is kevin davey have a great day you

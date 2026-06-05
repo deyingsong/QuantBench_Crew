@@ -103,9 +103,17 @@ export async function setupCwtNotebookLm({
     let snap = await tab.playwright.domSnapshot();
     if (snap.includes('button "Back"') && snap.includes("Source guide")) {
       const back = tab.playwright.getByRole("button", { name: "Back" });
-      if ((await back.count()) === 1) {
-        await back.click({});
+      const backCount = await back.count();
+      if (backCount >= 1) {
+        await (backCount === 1 ? back : back.nth(0)).click({});
         await tab.playwright.waitForTimeout(1000);
+      } else {
+        const visibleDom = String(await tab.dom_cua.get_visible_dom());
+        const backMatch = visibleDom.match(/<button node_id=(\d+)[^>]*>arrow_back<\/button>/);
+        if (backMatch) {
+          await tab.dom_cua.click({ node_id: backMatch[1] });
+          await tab.playwright.waitForTimeout(1000);
+        }
       }
     }
     snap = await tab.playwright.domSnapshot();
@@ -268,24 +276,28 @@ export async function setupCwtNotebookLm({
   }
 
   async function removeOnlySource() {
-    await ensureSourcesList();
-    const more = tab.playwright.getByRole("button", { name: "More" });
-    const count = await more.count();
-    if (count !== 1) throw new Error(`More button count: ${count}\n${await snapshotText(5000)}`);
-    await more.click({});
-    await tab.playwright.waitForTimeout(600);
-    const remove = tab.playwright.getByRole("menuitem", { name: "Remove source" });
-    if ((await remove.count()) !== 1) {
-      throw new Error(`Remove source unavailable\n${await snapshotText(5000)}`);
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await ensureSourcesList();
+      const more = tab.playwright.getByRole("button", { name: "More" });
+      const count = await more.count();
+      if (count === 0) return;
+      const target = count === 1 ? more : more.nth(0);
+      await target.click({});
+      await tab.playwright.waitForTimeout(600);
+      const remove = tab.playwright.getByRole("menuitem", { name: "Remove source" });
+      if ((await remove.count()) !== 1) {
+        throw new Error(`Remove source unavailable\n${await snapshotText(5000)}`);
+      }
+      await remove.click({});
+      await tab.playwright.waitForTimeout(700);
+      const del = tab.playwright.getByRole("button", { name: "Delete" });
+      if ((await del.count()) !== 1) {
+        throw new Error(`Delete confirm unavailable\n${await snapshotText(5000)}`);
+      }
+      await del.click({});
+      await tab.playwright.waitForTimeout(1800);
     }
-    await remove.click({});
-    await tab.playwright.waitForTimeout(700);
-    const del = tab.playwright.getByRole("button", { name: "Delete" });
-    if ((await del.count()) !== 1) {
-      throw new Error(`Delete confirm unavailable\n${await snapshotText(5000)}`);
-    }
-    await del.click({});
-    await tab.playwright.waitForTimeout(1800);
+    throw new Error(`Could not remove all sources\n${await snapshotText(5000)}`);
   }
 
   async function processVideo(video, usedNames) {

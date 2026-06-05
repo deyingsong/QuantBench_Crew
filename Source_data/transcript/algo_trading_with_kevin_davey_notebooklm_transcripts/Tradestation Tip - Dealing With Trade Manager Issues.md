@@ -1,0 +1,15 @@
+---
+title: "Tradestation Tip - Dealing With Trade Manager Issues"
+video_id: "VcgP4LKPXSo"
+url: "https://www.youtube.com/watch?v=VcgP4LKPXSo"
+duration: "4:21"
+source: "NotebookLM YouTube transcript import"
+---
+
+# Tradestation Tip - Dealing With Trade Manager Issues
+
+[Watch on YouTube](https://www.youtube.com/watch?v=VcgP4LKPXSo)
+
+## Transcript
+
+hi there I'm Champion Trader Kevin Davey and today I'm going to give you a very useful trade station trading tip if you're trading with real money so let's get started if you've been trading live with real money with trade station for any period of time you might have noticed that sometimes the trade station trade manager is off have you ever noticed that I know I have positions are off balances aren't updating a lot of weird little quirky things in where you look at it and you're like you know something's wrong here and you don't understand why Well turns out and I found this out only after this happening a few times turns out sometimes the trade manager uh gets gummed up gets stuck gets weirded out by something who knows what I don't know what the term is but uh you know there's Gremlins in the trade manager that just kind start messing it up and I noticed that a few times and whenever I notice it which I haven't noticed it in the past few months but every once in a while it crops up I'll have something like uh positions not matching when I know they do things like that so the fix is underlined in red there it's to delete the tach folder that's different than your data cache folder which is in a different spot but what you should do is close down trade station look for the tcash folder and there's the path to it where user is your username that Windows sets up and you just delete that whole folder and then restart it and this comes directly from trade station support So this comes from John John R at trade station so you can trust this as much as any anything you trust if you want to see the original topic where this was discussed you just go to topic ID 21885 but that's where he talks about it and guess what it seems to work so every once in a while if your trade manager just seems a little goofy uh this might be the fix for you now you might be worried oh hey I'm going to make things worse one of the things you can do is copy that folder and put it somewhere else on your computer and then you can always move it back if you really mess things up I've never had to do that I've just deleted that tcash folder and then it gets regenerated the next time you start trade station and guess what it usually gets rid of the problem so if you have a problem where trade manager is just a little wonky and a little kind of just goofy with what it's showing or maybe it's not showing anything at all that removing that tcash deleting that tcash folder might be the solution to your problem well hey if you thought this tip was useful leave a comment hit the like button don't forget to subscribe I want to thank you for watching have a great trading day I'm Kevin Davey a
