@@ -42,11 +42,18 @@ function yaml(value) {
   return String(value || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-export async function setupCwtNotebookLm({ tab, nodeRepl }) {
-  const csvPath = path.join(
-    nodeRepl.cwd,
-    "Source_data/transcript/chat_with_traders_video_list.csv",
-  );
+function normalizeUiText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+export async function setupCwtNotebookLm({
+  tab,
+  nodeRepl,
+  csvRelativePath = "Source_data/transcript/chat_with_traders_video_list.csv",
+  outRelativeDir = null,
+  tempOutDirName = "notebooklm_cwt_transcripts",
+} = {}) {
+  const csvPath = path.join(nodeRepl.cwd, csvRelativePath);
   const text = await fs.readFile(csvPath, "utf8");
   const lines = text.trim().split(/\r?\n/);
   const header = parseCsvLine(lines[0]);
@@ -54,7 +61,9 @@ export async function setupCwtNotebookLm({ tab, nodeRepl }) {
     const vals = parseCsvLine(line);
     return Object.fromEntries(header.map((h, i) => [h, vals[i] || ""]));
   });
-  const outDir = path.join(nodeRepl.tmpDir, "notebooklm_cwt_transcripts");
+  const outDir = outRelativeDir
+    ? path.join(nodeRepl.cwd, outRelativeDir)
+    : path.join(nodeRepl.tmpDir, tempOutDirName);
   const statusPath = path.join(outDir, "_status.jsonl");
 
   async function snapshotText(max = 12000) {
@@ -82,9 +91,10 @@ export async function setupCwtNotebookLm({ tab, nodeRepl }) {
       create = tab.playwright.getByRole("button", { name: "Create new notebook" });
       count = await create.count();
     }
-    if (count !== 1) {
+    if (count < 1) {
       throw new Error(`Create notebook count during recovery: ${count}\n${await snapshotText(4000)}`);
     }
+    if (count > 1) create = create.nth(0);
     await create.click({});
     await tab.playwright.waitForTimeout(2500);
   }
@@ -96,6 +106,15 @@ export async function setupCwtNotebookLm({ tab, nodeRepl }) {
       if ((await back.count()) === 1) {
         await back.click({});
         await tab.playwright.waitForTimeout(1000);
+      }
+    }
+    snap = await tab.playwright.domSnapshot();
+    if (snap.includes("Source guide") && !snap.includes("Select all sources")) {
+      const visibleDom = String(await tab.dom_cua.get_visible_dom());
+      const toggleMatch = visibleDom.match(/<button node_id=(\d+)[^>]*>collapse_content<\/button>/);
+      if (toggleMatch) {
+        await tab.dom_cua.click({ node_id: toggleMatch[1] });
+        await tab.playwright.waitForTimeout(1200);
       }
     }
     snap = await tab.playwright.domSnapshot();
@@ -152,7 +171,9 @@ export async function setupCwtNotebookLm({ tab, nodeRepl }) {
     while (Date.now() < deadline) {
       await tab.playwright.waitForTimeout(3000);
       last = await tab.playwright.domSnapshot();
-      const sourceListSuccess = last.includes(video.title) && last.includes("Select all sources");
+      const sourceListSuccess =
+        normalizeUiText(last).includes(normalizeUiText(video.title)) &&
+        last.includes("Select all sources");
       const chatSuccess = last.includes("1 source") && last.includes('tabpanel "Chat"');
       if (sourceListSuccess || chatSuccess) {
         await ensureSourcesList();
@@ -170,9 +191,17 @@ export async function setupCwtNotebookLm({ tab, nodeRepl }) {
     let source = tab.playwright.getByRole("button", { name: video.title });
     let count = await source.count();
     if (count !== 1) {
+      source = tab.playwright.getByRole("button", { name: normalizeUiText(video.title) });
+      count = await source.count();
+    }
+    if (count !== 1) {
       await tab.playwright.waitForTimeout(3000);
       source = tab.playwright.getByRole("button", { name: video.title });
       count = await source.count();
+      if (count !== 1) {
+        source = tab.playwright.getByRole("button", { name: normalizeUiText(video.title) });
+        count = await source.count();
+      }
     }
     if (count !== 1) {
       throw new Error(`Imported source button count for exact title: ${count}\n${await snapshotText(6000)}`);
@@ -184,7 +213,7 @@ export async function setupCwtNotebookLm({ tab, nodeRepl }) {
       else await source.click({});
       await tab.playwright.waitForTimeout(3500);
       last = await tab.playwright.domSnapshot();
-      if (last.includes("Source guide") && last.includes('button "Back"')) return;
+      if (last.includes("Source guide")) return;
     }
     throw new Error(`Source did not open after retries: ${video.title}\n${last.slice(0, 6000)}`);
   }
@@ -223,6 +252,21 @@ export async function setupCwtNotebookLm({ tab, nodeRepl }) {
     return file;
   }
 
+  async function existingTranscriptForVideo(video) {
+    const files = await fs.readdir(outDir).catch(() => []);
+    for (const file of files.filter((item) => item.endsWith(".md"))) {
+      const fullPath = path.join(outDir, file);
+      const text = await fs.readFile(fullPath, "utf8").catch(() => "");
+      if (
+        text.includes(`video_id: "${yaml(video.video_id)}"`) ||
+        text.includes(`url: "${yaml(video.url)}"`)
+      ) {
+        return { file: fullPath, chars: text.length };
+      }
+    }
+    return null;
+  }
+
   async function removeOnlySource() {
     await ensureSourcesList();
     const more = tab.playwright.getByRole("button", { name: "More" });
@@ -259,6 +303,20 @@ export async function setupCwtNotebookLm({ tab, nodeRepl }) {
     const results = [];
     for (const video of videos.slice(startIndex1Based - 1, startIndex1Based - 1 + count)) {
       try {
+        const existing = await existingTranscriptForVideo(video);
+        if (existing) {
+          const result = {
+            status: "skipped",
+            index: video.index,
+            video_id: video.video_id,
+            title: video.title,
+            file: existing.file,
+            chars: existing.chars,
+          };
+          results.push(result);
+          await fs.appendFile(statusPath, `${JSON.stringify(result)}\n`, "utf8");
+          continue;
+        }
         const result = await processVideo(video, usedNames);
         results.push(result);
         await fs.appendFile(statusPath, `${JSON.stringify(result)}\n`, "utf8");
