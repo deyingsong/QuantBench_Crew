@@ -87,11 +87,11 @@ export async function setupCwtNotebookLm({
     await closeAnyDialog().catch(() => false);
     let create = tab.playwright.getByRole("button", { name: "Create notebook" });
     let count = await create.count();
-    if (count !== 1) {
+    if (count < 1) {
       create = tab.playwright.getByRole("button", { name: "Create new notebook" });
       count = await create.count();
     }
-    if (count !== 1) {
+    if (count < 1) {
       create = tab.playwright.locator('button:has-text("Create notebook")');
       count = await create.count();
     }
@@ -99,7 +99,16 @@ export async function setupCwtNotebookLm({
       throw new Error(`Create notebook count during recovery: ${count}\n${await snapshotText(4000)}`);
     }
     if (count > 1) create = create.nth(0);
-    await create.click({});
+    try {
+      await create.click({});
+    } catch (err) {
+      const visibleDom = String(await tab.dom_cua.get_visible_dom());
+      const domMatch =
+        visibleDom.match(/<button node_id=(\d+)[^>]*aria-label="Create new notebook"[^>]*>/) ||
+        visibleDom.match(/<mat-card node_id=(\d+)[^>]*>add Create new notebook<\/mat-card>/);
+      if (!domMatch) throw err;
+      await tab.dom_cua.click({ node_id: domMatch[1] });
+    }
     await tab.playwright.waitForTimeout(2500);
   }
 
