@@ -1,0 +1,15 @@
+---
+title: "Algo Trading Workshop #7"
+video_id: "OotgpjaHHaw"
+url: "https://www.youtube.com/watch?v=OotgpjaHHaw"
+duration: "3:45"
+source: "NotebookLM YouTube transcript import"
+---
+
+# Algo Trading Workshop #7
+
+[Watch on YouTube](https://www.youtube.com/watch?v=OotgpjaHHaw)
+
+## Transcript
+
+so in the last video I talked about the TradeStation rebate which is a great program that allows you to get my strategy factory workshop for free but you might be asking well what do I do I don't know TradeStation I don't know easy language how can this work for me well I just recently put in a new program that's an optional add-on to the strategy factory workshop so if you don't know TradeStation you don't know easy language don't worry because I will teach you what you need to know with the easy language so it's not a six-month course just to learn easy language I give you targeted information that helps you develop strategies quickly with the strategy Factory in mind so there's a lot of things in TradeStation that are nice to know but they really don't help you build better strategies or build strategies at all and so I focus on just what helps you and part of that is 26 videos and I'll add videos over time as people request different topics almost four hours of material that take you from how to install TradeStation and what version to use all the way through developing a fairly simple strategy but one that you could use as part of the strategy Factory so you get that you also get unlimited email support that's either from me or from an expert that I work with who's an easy language master and so all your easy language questions will be answered and then to top it off if you ever run into issues where you really need to do some screen sharing to show what's going on with your system we can do that we have one on one screen sharing that's all part of your Support Package that you can use if you need it so there's a whole lot of things that help you learn easy language without burdening you so the intent with this add-on isn't to teach you everything you need to know about easy language that would take years heck I've been doing it for 15 years and I'm still learning things about easy language but what I do is give you enough that gets you going and building strategies and what you'll find is once you start building strategies and coding some simple strategies then you'll start getting better and better just by practicing and knowing that I'm an email away for support is a great way to learn easy language so really what it comes down to is if you can't program I'll teach you the programming and then the workshop teaches you strategy building in the right way so you put it all together and you have a pretty much unbeatable way to go from almost beginner with easy language and TradeStation to developing good strategies okay so that's how I can teach the beginner at easy language you might be wondering well what do people in general what does the Internet think of the strategy Factory workshop that's in the next video
