@@ -46,6 +46,10 @@ function normalizeUiText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export async function setupCwtNotebookLm({
   tab,
   nodeRepl,
@@ -127,6 +131,15 @@ export async function setupCwtNotebookLm({
           await tab.dom_cua.click({ node_id: backMatch[1] });
           await tab.playwright.waitForTimeout(1000);
         }
+      }
+    }
+    snap = await tab.playwright.domSnapshot();
+    if (snap.includes("Source guide") && snap.includes('button "Close source guide"')) {
+      const closeGuide = tab.playwright.getByRole("button", { name: "Close source guide" });
+      const closeGuideCount = await closeGuide.count();
+      if (closeGuideCount >= 1) {
+        await (closeGuideCount === 1 ? closeGuide : closeGuide.nth(0)).click({});
+        await tab.playwright.waitForTimeout(1000);
       }
     }
     snap = await tab.playwright.domSnapshot();
@@ -235,7 +248,19 @@ export async function setupCwtNotebookLm({
       }
     }
     if (count !== 1) {
-      throw new Error(`Imported source button count for exact title: ${count}\n${await snapshotText(6000)}`);
+      const visibleDom = String(await tab.dom_cua.get_visible_dom());
+      const titlePattern = escapeRegExp(normalizeUiText(video.title));
+      const sourceMatch =
+        visibleDom.match(new RegExp(`<button node_id=(\\d+)[^>]*>${titlePattern}<\\/button>`)) ||
+        visibleDom.match(new RegExp(`<button node_id=(\\d+)[^>]*>[^<]*${titlePattern}[^<]*<\\/button>`));
+      if (!sourceMatch) {
+        throw new Error(`Imported source button count for exact title: ${count}\n${await snapshotText(6000)}`);
+      }
+      await tab.dom_cua.click({ node_id: sourceMatch[1] });
+      await tab.playwright.waitForTimeout(3500);
+      const snap = await tab.playwright.domSnapshot();
+      if (snap.includes("Source guide")) return;
+      throw new Error(`Source DOM click did not open source guide: ${video.title}\n${snap.slice(0, 6000)}`);
     }
     let last = "";
     for (let attempt = 1; attempt <= 4; attempt += 1) {
