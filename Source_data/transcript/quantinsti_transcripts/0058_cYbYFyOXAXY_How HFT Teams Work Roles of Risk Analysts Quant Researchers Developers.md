@@ -1,0 +1,132 @@
+---
+title: "How HFT Teams Work | Roles of Risk Analysts, Quant Researchers & Developers"
+video_id: "cYbYFyOXAXY"
+url: "https://www.youtube.com/watch?v=cYbYFyOXAXY"
+duration: "5:20"
+caption_language: "en"
+caption_source: "youtube-transcript-api"
+---
+
+# How HFT Teams Work | Roles of Risk Analysts, Quant Researchers & Developers
+
+[Watch on YouTube](https://www.youtube.com/watch?v=cYbYFyOXAXY)
+
+## Transcript
+
+developers are people who build the
+software Traders are who manage the
+money and the risk and researchers are
+who find the alphas and find how to find
+the trading
+strategy how do these guys collaborate
+to achieve the trading goals of say for
+example I
+reach because there are multiple things
+that uh uh
+click so the traditional boundary
+between developer and researcher and
+Trader is becoming a little blurred so
+now you can't like okay I'll focus on
+only part A and then I will aim to be
+like supremely successful in high
+frequency trading so uh typically the
+successful ones uh are people
+who do the research themselves which is
+Big Data analysis and then uh they would
+implement it themselves and therefore
+they know that how and why if things go
+wrong or things need to be changed or
+modified or so on and so forth they
+would have to control on it and then
+they would trade it and then they would
+get the line feedback and then they
+would make the changes so this is okay I
+think I should have taken a statement so
+developers are people who build the
+software Traders are who manage man the
+money and the risk and researchers are
+who find the alphas and find how to find
+the trading strategy now as I mentioned
+in a lot of cases the
+boundaries uh get blurred uh there could
+be people who are pure researchers they
+could be people who are pure developers
+and uh
+Traders uh P
+Traders could exist but then uh it's
+most
+Trader plus researcher Trader plus
+researcher plus develop with developer
+there could be people who are developing
+the strategy could people who are
+developing the tools for research
+developing uis which are very
+uh if you're trading so on each exchange
+there there's like 100,000 plus
+instruments right so now if you're
+trading a lot
+of assets uh instruments on the exchange
+there's a lot of millions of orders that
+you are sending as a tra
+you have uh that information the
+alerting
+of outlier events and then so on and so
+forth that has to be presented to the
+trader in a very uh what do you call
+user friend uiux efficient U ux way so
+there is a lot of development on that as
+well and plus there is also uh core
+development of the platform which is the
+basically
+the connectivity to the exchanges so you
+would have people who are just focusing
+on building the connectivity to the
+exchanges be the market dataor which is
+Market that are coming from the exchange
+or they sending orders to The Exchange
+so people who are focusing purely on the
+de side of development they are people
+who are focusing on the strategy
+development the strategy developers
+could be trainers and researchers people
+who could be focusing on the research
+so uh once again uh uh depending upon
+firm to firm the structure
+vary so there are some firms in which
+there would be independent teams where
+the researcher developer Trader for each
+team would be
+totally isolated and then there could be
+other forms where there is a
+centralized team of developers there
+would be a centralized team of
+developers building the adapters for all
+the teams but then typically in almost
+all most cases the researchers and then
+the strategy specific developers would
+work in different silence now how much
+the teams interact with each other that
+depends upon the corporate philosophy of
+each corporate so there some firms work
+each team Works totally independently
+there's no sharing of Ip and then uh you
+wouldn't know what your neighboring team
+is doing and so on and so uh there are
+other forms
+where uh there is encouragement of
+discussion
+about uh insights and then at a broad
+level which could help different teams
+under the firm as a b so yeah it depends
+how the firm's philosophy is so we try
+to have a mix of both so very individual
+teams they uh are incentivized to uh
+based on their profitability but at the
+top level things that impact the global
+level we we we share uh encourage
+sharing of uh insights and then building
+tools which are common to everyone so
+it's not like tools are built by the
+team for themselves we we as a firm we
+build common tools for which can be used
+by differents

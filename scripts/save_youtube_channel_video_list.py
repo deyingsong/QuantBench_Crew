@@ -35,18 +35,24 @@ def write_csv(path: Path, videos: list[dict[str, Any]]) -> None:
             )
 
 
-def write_markdown(path: Path, videos: list[dict[str, Any]], channel_url: str) -> None:
+def write_markdown(
+    path: Path,
+    videos: list[dict[str, Any]],
+    channel_url: str,
+    title: str,
+    include_duration: bool,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as file:
-        file.write("# Chat With Traders Podcast Videos\n\n")
+        file.write(f"# {title} Videos\n\n")
         file.write(f"Channel: <{channel_url}>\n\n")
         file.write(f"Total public videos: {len(videos)}\n\n")
         for index, video in enumerate(videos, start=1):
             video_id = video.get("id") or ""
-            title = video.get("title") or "Untitled"
+            video_title = video.get("title") or "Untitled"
             duration = format_duration(video.get("duration"))
-            suffix = f" ({duration})" if duration else ""
-            file.write(f"{index}. [{title}]({video_url(video_id)}){suffix}\n")
+            suffix = f" ({duration})" if include_duration and duration else ""
+            file.write(f"{index}. [{video_title}]({video_url(video_id)}){suffix}\n")
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,6 +60,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--channel-url", default=DEFAULT_CHANNEL_URL)
     parser.add_argument("--csv", default="chat_with_traders_video_list.csv")
     parser.add_argument("--markdown", default="chat_with_traders_video_list.md")
+    parser.add_argument("--title", default="Chat With Traders Podcast")
+    parser.add_argument("--hide-duration", action="store_true")
     return parser.parse_args()
 
 
@@ -62,7 +70,13 @@ def main() -> None:
     print(f"Fetching public video list from {args.channel_url}")
     videos = get_channel_videos(args.channel_url)
     write_csv(Path(args.csv), videos)
-    write_markdown(Path(args.markdown), videos, args.channel_url)
+    write_markdown(
+        Path(args.markdown),
+        videos,
+        args.channel_url,
+        args.title,
+        include_duration=not args.hide_duration,
+    )
     print(f"Saved {len(videos)} videos")
     print(f"CSV: {Path(args.csv).resolve()}")
     print(f"Markdown: {Path(args.markdown).resolve()}")

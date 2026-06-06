@@ -1,0 +1,106 @@
+---
+title: "How AI Is Reshaping Quant Roles: The Skills You Need to Stay Relevant"
+video_id: "F5J9aXmsP3Y"
+url: "https://www.youtube.com/watch?v=F5J9aXmsP3Y"
+duration: "3:35"
+caption_language: "en"
+caption_source: "youtube-transcript-api"
+---
+
+# How AI Is Reshaping Quant Roles: The Skills You Need to Stay Relevant
+
+[Watch on YouTube](https://www.youtube.com/watch?v=F5J9aXmsP3Y)
+
+## Transcript
+
+AI is not going to take your job.
+Someone who uses AI is going to take
+your job. I just don't think you'd be
+considered if you don't have AI
+integrated into your coding workflow.
+>> You can't just ignore it and say like,
+"Oh, I'm not going to do that."
+>> What you guys are actually witnessing AI
+is automation of tasks like you know
+model validation, risk assessment.
+what skills remain in demand and what
+are the new core skill areas that you
+marching
+>> AI is not going to take your job someone
+who uses AI is going to take your job um
+people who are hiring I just don't think
+you you'd be considered if if you don't
+have AI integrated into your coding
+workflow in terms of deep learning or
+developing trading strategies in in
+quant jobs that certainly is is
+important
+I would say maybe it's definitely a
+plus. It's not essential compared to
+knowing how to leverage large language
+models. The reason I say that is because
+a lot of the information that we might
+be able to exploit in trading is words.
+And so knowing how to take advantage of
+that I think is prime uh say compared to
+building other types of machine learning
+models. having AI look out for things
+out of the ordinary and and again you
+want to tune them or have them pay
+attention to things that you know about
+like if you're especially knowledgeable
+about stocks in Hong Kong, Singapore,
+India, wherever, focus on properties of
+those that you will be able to take
+advantage of and have have the AI raise
+those flags for you. I think that most
+of the the subjects remains the same in
+any company not not necessarily only in
+trading because it's something which is
+horizontal to many sectors. So I would
+say that most of the roles are given by
+the things that the companies have to
+do. It's a lot about how you do them
+like I know probably the the jobs are
+moving at a if you want to say higher
+level or different level. So you not
+only have to probably understand what
+you're for example as a risk manager
+what are the risk and how to model them
+but you also be a user of models or the
+II software can help you create risk
+scenarios but then you're sort of a
+manager of those models so you have to
+be able to use them so most of the task
+I think that the jobs are changing as
+you as you are giving people new tools
+which are very powerful if I had a
+larger company I like to think about you
+know hiring is someone that keeps up to
+with what's going on.
+>> And now with AI, I feel like you can't
+just ignore it and say like, "Oh, I'm
+not going to do that." I think that's
+going to be a new career skill. We're
+trying to figure out the depth of what
+you're required to do. And then, you
+know, we want to see it, but how much
+time do you spend on that? And to
+Matteo's point, right, I would love to
+have somebody who's actually like
+tracking, keeping track of all of it,
+cuz even for my personal time now, you
+know, while seasoned over a decade in,
+it's a new thing now. Now it's like
+should I drop what I'm currently working
+on to go learn the AI skills to get
+better at prompt engineering to
+understand the models better in depth
+and find new use cases. But I think
+career-wise the skill is going to be at
+least having some general knowledge and
+knowing where to apply them. But yeah,
+it's a hard piece to be in. But I think
+you know AI is going to be a new skill
+that's going to be required for most
+roles.

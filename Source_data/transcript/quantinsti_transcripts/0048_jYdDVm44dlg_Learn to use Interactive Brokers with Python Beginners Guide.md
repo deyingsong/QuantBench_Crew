@@ -1,0 +1,486 @@
+---
+title: "Learn to use Interactive Brokers with Python | Beginner's Guide"
+video_id: "jYdDVm44dlg"
+url: "https://www.youtube.com/watch?v=jYdDVm44dlg"
+duration: "26:27"
+caption_language: "en"
+caption_source: "youtube-transcript-api"
+---
+
+# Learn to use Interactive Brokers with Python | Beginner's Guide
+
+[Watch on YouTube](https://www.youtube.com/watch?v=jYdDVm44dlg)
+
+## Transcript
+
+this is Interactive Broker main website
+to
+ibtw it will this is I web web
+page then next part let's talk about
+interactive brokers inter interactive
+brokers is
+LC we call it I
+and it's a us-based brokerage form it
+operates the largest electronic trading
+platform in the United States by number
+of daily average revenue
+trades um this is a Interactive Broker
+so
+website you can go
+there take a look quickly yeah this is a
+interactive
+brokers sorry I'm just checking the
+questions okay this is Interactive
+Broker main
+website uh if you are interested in it
+you can just click y IB
+care then you can read through about
+this
+page based on my personal
+experience the advantages of
+IB the most important to myself is is
+Advanced API technology
+API stands
+for actually is uh automated program
+interface which
+enables traders to do
+trading using
+uh API actually it's a just a uh
+interface between two computers so that
+you can communicate
+information and ab ib's Advanced API
+technology enable traders to use program
+to
+trade that's the most important thing I
+think for IB the next part is IB
+provides very competitive pricing so by
+trading with IB you can uh save some
+cost and make more profit the next part
+is IP offers Global Market access
+if you go through the website you will
+find I be access 125 Market in 31
+countries and use 22
+currencies so it's a
+very uh convenience to do trading with
+IB then the next part is how to do AO
+trading with
+IB just as I explained you can use
+Python programs in IBD pie and then get
+connected to IB and then trade this is
+the brief
+introduction about Interactive
+Broker the next part let's talk about
+iage pad iage pad is a Pon
+software helping traders to set up outgo
+trading
+platform at their own
+computers or at the virtual computers in
+Cloud uh this is ibridge
+Pi's website
+wwwi
+ibp.com
+go there to take look together yeah this
+is
+I's web web page you can take a look so
+is is is the python platform to back
+test and live trade with interb
+Brokers but
+actually in the most recent release you
+can use ibrid P to trade with Robin Hood
+Robin Hood is a us-based brokerage form
+again and it offers zero commission
+trading so if you are interested you can
+take a
+look the advantages of iage Pi I will
+talk about the first is I Bridge pie can
+protect Traders intellectual
+properties because course IBD P help
+Traders set up
+everything at their own
+computer so that Traders does not need
+to disclose anything or post any
+information on
+internet think about other competitors
+online most of them ask
+trailers to code their strategies
+on their
+website so think about if you code your
+python on the website
+so actually ion in Python you cannot
+hide anything and then you upload your
+strategy to other website there
+definitely some
+risks of your intellectual properties
+but think about it if you do everything
+on your local
+computer then that's you can control
+everything yeah that's the safest way to
+protect your
+strategies the next part of aage p is
+you can back test and live
+trade
+together one place I will demonstrate
+that the next part is you can use any
+python packages
+including uh AI and the Machine
+learnings and other packages you can
+trade with different Brokers manage
+multiple accounts and run quop
+algorithms if you are familiar with uh
+uh quantopian
+preparation there are a few preparations
+to set up uh iage P trading platform but
+it's a pretty straight
+for the first thing is to go to aage
+pie.com slash download we download the
+aage P there let go through it very
+quickly if you go to download download
+average
+p and if you are a user then you can log
+in and then we can L there okay it's
+there download the most Reas version
+is there and if you are interested what
+has been released you can go to the
+release note and take a
+look right
+there and
+then so check out your operating system
+it support
+Windows Mac and UB to
+Linux also you need to think
+about what kind of python you are using
+if you are a Windows user you must
+install an account on python but you can
+choose to use you either
+2.7
+3.6 or
+3.7 for others you can just uh uh follow
+the instruction here what you need to do
+is go to hyrid P python 2 60p 4 bit if
+you are using
+windows and
+accounta
+2.7 so what you need to do is just click
+and download the Z file and save it to
+your
+local and then unve it yeah I won't
+explain it too much because it's pretty
+straightforward and
+then what you need to do is to apply
+account either a paper account or Live
+account with interactive brokers so you
+go to interactive brokers you can either
+open a real account or click free
+trial yeah both of them works on aage P
+then the next part is download and
+install IB official terminals on your
+local
+computer one of them called IB Gateway
+the other way called Trader
+workstation you just click the download
+link yeah just click
+download and install the software as
+required it's pretty straightforward and
+then config IB Gateway and
+twws install python because we are going
+to write python code and execute python
+code so you need a python
+if you have any questions you can go to
+IBD P tutorials to read
+it uh read the
+instruction details tutorials
+there there's tutorial you can click one
+of them or all of
+them other thing you may be interested
+is i brid p
+documentation so that you can see what
+functions are provided the I brid pie
+and what are their
+performance if you have any other
+questions maybe they are listed at a QA
+section there you can go through
+questions and find out the
+answers another thing I would like to
+introduce is the
+community because the users are very
+active on this forum
+and you can see a lot of questions and
+answers there just
+quickly experience about that then the
+next part is give you a demo
+about how to config twws and IB
+Gateway after you log
+in to IBT
+WS it
+will looks like this you provide your ID
+and a
+password a few things you need to do is
+config click
+file Global
+configuration left side on
+API
+settings on the right hand side what you
+need to do is enable active X and socket
+CLI make sure the socket port is
+7496 and then click
+okay that's all you need to do to config
+twws is documented in the IBD P tutorial
+if you missed it you can go back to
+there and
+then let me talk about the I quick demo
+here so first step is to open a python
+environment right now I'm using
+Windows so that I install
+Ana Anda has its
+own python ID
+environment called
+spider so I open spider
+already you can see I'm using python
+3.6 not the latest
+python that is also supported
+already typically I like
+to organize my
+windows so left side is
+code right hand side is iyon
+console what I like to is restart a
+kernel at the
+beginning and
+then first thing you need to do is
+open the file in abrid pie folder called
+run me.
+py this is the main
+entrance of aage
+P what you need to do
+is first find out your account code in
+IB Gateway all
+twws in twws you can see on the upper
+right corner you will see your account
+code d230 626 that's my paper account
+code write it
+down and then look for the r me.
+py you can see
+the account code is
+here you just change it to your own
+account
+code this is one thing you need to
+do okay either real account or paper
+account but I'm using paper account
+right now then the next what you need to
+do is to choose an IBD by ex example
+code by commenting out all other file
+names I mean
+by that is if you open
+ry. py you will find the multiple lines
+of file
+name with example code
+there you
+just comment in one
+line indicating the python code you want
+to run and comment out all
+others that's what you need to do run uh
+uh python
+code and then the last step is just run
+run.py in Python what I mean by that is
+just click
+this green
+triangle and run
+it the demo I want to give you
+is the first demo
+is example show position.
+py so this code will download your AR on
+the information and display on the
+screen we run it and take a look pretty
+fast let's quick look quick look so
+ibrid P verion
+5.64 file name is showing up there the
+next part is starting initialized
+Trader and initialized Trader completed
+when you see that which means your i
+brid p run while on your
+computer and then the next part it will
+print out your account balance three
+numbers cash value portfolio value and
+positions
+value then if you have any
+positions for example I have
+apple
+Forex Euro to USD dollar and I have
+spy which is the uh
+ETF tracking SP 500
+Index so this
+is my
+positions and you can trade the stocks
+options Futures
+Forex any contracts supported in IB
+using average pad then if you you have
+any pending order
+it will list it up there you can see I
+have one order order ID is
+134 status is
+submitted other information
+there you can see this is a
+limit to buy
+limit U by Forex USD uh Euro to USD
+dollars
+limited price is 1 cent that's why is
+still app pending
+order and if you place
+orders which cannot
+be manipulated by the program it will
+listed by perm
+ID there so that your code cannot touch
+it there
+Amazon and the interactive brokers stock
+there then e and
+D that's the end of the information
+there okay this is the demo of how to
+run i p if you want to switch to other
+program what you need to do is just a
+comment out this
+line in Python you use hash account H
+son then the next part is to comment out
+this one this one example is to show
+real time
+price right
+now oh Market is open
+already let's still run this real time
+price right now I'm
+showing real time prices of Euro to USD
+dollars you can see it prints out price
+every second
+yeah stop
+there and I like to clean the kernel
+every
+time make screen oh this is the
+code okay this code is a very
+simple what I want to show you is right
+now the market is
+open I want to get the real time price
+of
+spy and that's print s Spy as simple as
+that and then go to run me. py and run
+it you can see spy price coming in right
+now because right now US market is
+open see it's going on right now
+stop
+it for example I just want to obtain
+historical data what I will do is to
+comment out the other code
+and comment in this line so it will get
+historical
+data for example I just run it to I want
+to give you a feeling about how it
+runs so it print out the historical data
+of
+spy in my code I ask for the price of
+Apple and Google you can see the
+historical data comes in yeah this is
+the quick demo of how a brid p runs if
+you are interested in what the code in
+the SU
+Le in the sample code what you need to
+do is open
+file this is the IBD P folder and you go
+to
+strategies and look for for example this
+is the code I use to get historical data
+example get historical data. py you
+don't open it up you can take look is
+very straightforward
+we Define symbol and request historical
+data and then
+print simple as
+P okay let's go back to the
+presentation see anything else okay the
+code
+structure so we start to talking about
+the python code I will talk about a few
+functions uh at the beginning it may not
+be as straightforward but please follow
+me you will understand it's a pretty
+simple actually in aage P there are
+three basic functions the first one is
+called
+initialize this function is used to
+declare ay Global variables I will show
+you
+example this function runs once at the
+beginning of your
+execution so which means just one time
+if you want to run something one time at
+the beginning of your code put it there
+in this
+function the other function is called
+handle
+data this is the function where you put
+your trading
+decisions it runs every second as
+default but it's configurable you can
+change
+it and as I mentioned trading decision
+are made there if you want to make
+decisions have a fixed schedule for
+example every second every minute every
+hour or even every day or every 10
+minutes something like that you can
+configure
+it however you may not want to do
+something
+regularly as often as one minute you
+just say I want to do something at the
+beginning of the market 9:30 Eastern
+Time
+or you want to do something just one
+second before the market
+close so that you will use a function
+called schedule function you can
+schedule events there you can call
+function there yeah this is the three
+basic functions you need to
+run you need to write your
+code okay give you uh let's talk about
+the code a little bit so initialized
+function looks like
+this in the example of show realtime
+prices so this simple code will print
+ask price of SP every second just what I
+demoed for you so in
+initialize I Define a global variable
+called
+security the way I Define it is I put
+context do security so in this way
+context. security
+becomes a global variable in average Pi
+so that you can use in use it in other
+functions for example handle
+data context out the security here and I
+use i p function called symbol to define
+the contract so I put spy which means I
+want to trade spy
+ETF and trade that IB
+then because I want to print ask price
+of SP every
+second so I put my trading decision even
+if it's not trading decision but just
+print or
+action so I put the function show real
+time
+price in handle data so that this part
+of code will be executed every second as
+default
+and then I
+put the global variable here and tell it
+I want
+to have ask price there and then I put a
+variable local variable called ask price
+and then I just print as I showed you in
+the example it just keep running every
+second as we showed you the show real
+time price and it just keep going
+it just show real time price think about
+you have the real time price you can do
+the calculation for example when the
+price is greater than $300 I just place
+order so what you need to do is continue
+this handle data and place order there
+Iver brid P will execute that

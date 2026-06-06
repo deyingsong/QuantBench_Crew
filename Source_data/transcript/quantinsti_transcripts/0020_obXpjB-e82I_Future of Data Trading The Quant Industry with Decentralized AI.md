@@ -1,0 +1,114 @@
+---
+title: "Future of Data, Trading & The Quant Industry with Decentralized AI"
+video_id: "obXpjB-e82I"
+url: "https://www.youtube.com/watch?v=obXpjB-e82I"
+duration: "3:46"
+caption_language: "en"
+caption_source: "youtube-transcript-api"
+---
+
+# Future of Data, Trading & The Quant Industry with Decentralized AI
+
+[Watch on YouTube](https://www.youtube.com/watch?v=obXpjB-e82I)
+
+## Transcript
+
+a lot of separation between, you know,
+small firms, big firms, anything like
+that. I think it'll be kind of a, you
+know, kind of a constant movement in
+society and in industry as a whole.
+>> The winner of the Premier League will be
+using data from a decentralized network.
+>> I wouldn't dare to make a real
+assumption what's going to happen in 3
+years because 3 years is a very long
+time.
+[music]
+uh prediction based on you know your
+outlook about how this [music] field
+will change maybe in 3 years or five
+years. So right now there are many
+things that are variable like AGI
+quantum computing maybe AI native
+marketplace. So what is your outlook on
+the future [music]
+in say 3 to 5 years stand time standing
+>> there could be a trend towards these
+models more and more commoditized anyway
+these open-source models becoming always
+open to everyone so the big edge in
+using AI is available always to everyone
+and so then the situation would be very
+different from cases where you know you
+[music] start towards more proprietary
+model so all the investments of a
+company with very deep pockets become to
+be kept within that [music] company. So
+this could be something which I don't
+know what will be probably the trend is
+the first one. So everything becomes
+open source and so [music] on. But I
+think this it could be a great could
+change things in a way or another
+depending on what kind of of trend it
+picks up. Now what are the new
+innovation IM model would be able to do?
+I honestly don't know. Probably it's
+more in the the automation of some tasks
+or not. But honestly, I wouldn't dare to
+make a real assumption what's going to
+happen in 3 years because 3 years is a
+very long time.
+>> I think a rising tide lifts all boats.
+So I do see, you know, as a society and
+as firms and as an industry technology
+increasing. I think it's getting better,
+but I think we will not see necessarily
+too [music] much deviation. You have new
+firms come in, you'll see great success,
+you'll see firms drop out, but I think
+everyone's kind of adapting across the
+board. [music] And as we open source
+things and as things are provided
+across, you know, different funds, we'll
+continue to see kind of advancements as
+a whole. But I don't think we'll see a
+lot of separation between, you know,
+small firms, big firms, anything like
+that. I think it'll be kind of a, you
+know, kind of a constant movement as
+society and in industry as a whole.
+>> Significant leveling of the playing
+fields for for new entrance coming in
+for how we start off with quant strategy
+to start off with anything to do with
+quant. I don't think the bigger firms
+will have an edge at least in the low to
+medium frequency strategy space.
+>> I believe that AI would be [music]
+strengthened and grow more in sort of
+the periphery in a more decentralized
+worked manner than in inside large firms
+necessarily. I'm doubling down on that
+bet to be super specific. I will say
+that [music] 5 years from now the winner
+of the Premier League will be using data
+from a decentralized network on subnet
+44. They'll be using AI to assimilate
+all the world's information. They'll
+[music] be using AI for for player
+ratings and assessment and so forth. And
+you know rather than prognosticate about
+that in finance on the buy side
+specifically, [music] I tend to agree
+with the media things have become more
+competitive. I would also point out that
+things outside of finance are going to
+start to feel more like finance. We are
+already instrumenting the world in many
+different ways and starting to trade it.
+Economic events and so forth. I see the
+proliferation of prediction markets and
+things that look like quant trading
+growing over time.

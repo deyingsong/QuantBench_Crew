@@ -1,0 +1,173 @@
+---
+title: "AI Model Explainability in Quant Finance: Experts Debate"
+video_id: "iuBOmKIsfRk"
+url: "https://www.youtube.com/watch?v=iuBOmKIsfRk"
+duration: "6:11"
+caption_language: "en"
+caption_source: "youtube-transcript-api"
+---
+
+# AI Model Explainability in Quant Finance: Experts Debate
+
+[Watch on YouTube](https://www.youtube.com/watch?v=iuBOmKIsfRk)
+
+## Transcript
+
+A better example would be something like
+a night capital, right? Of course, you
+can lose a lot of money very quickly.
+That is a failure with the sandbox that
+you should be operating within. It is
+completely irrelevant to the
+explanability of the price you were
+using in that given point in time. It is
+a strict falsehood to say that you need
+to understand what the model is doing.
+That is just not true.
+>> Um I would disagree with Pier. Um
+explanability I think is the core of
+finance. Without it, you are not doing
+finance. You're not doing quant finance.
+I think you're just kind of gambling.
+Um, but we'll see deviations, right? If
+something blows up, I mean, LTCM always
+comes to mind like how is that going to
+be explained to the public?
+So, as the AI models become more and
+more sophisticated, uh, they also become
+less and less interpretable and this
+creates a real challenge especially for,
+you know, smaller farms. uh they they
+cannot afford a compliance missteps. So
+what best practices exist for ensuring
+explanability
+uh and uh robustness?
+>> They come with many scars and and years
+of uh internal model review processes in
+large banks and that kind of thing. And
+I sure as hell wish I had an LLM to
+generate those documents at the time. Um
+not to mention keep them up to date with
+changes in code and uh automatically
+generate tests and so on and so forth.
+In some ways it's a it's a gift uh to
+people internally faced with any kind of
+kind of model bureaucracy. It's looms
+are an amazing weapon. I think it's
+incredibly important to uh bifocate the
+problem. It's silly to think of this the
+one kind of regulatory problem. If you
+are making a large number of systematic
+trades
+and the the P&L loss on any given single
+trade uh is is not going to uh you know
+blow up your firm or make a material
+impact um and you can measure that uh
+you know sequentially
+um then
+there's a fairly simple application of
+the triangle inequality which would
+suggest that as long as your model is
+within epsilon of some other model which
+is well understood. You can bound the
+material risk of your model and it is a
+strict falsehood to say that you need to
+understand what the model is doing that
+it's just not true. Right? Is
+mathematically false. Um you need to
+bound the model risk separate from other
+material risks and you can often do that
+if you're in an algorithmic trading
+context. A better example would be
+something like a night capital, right?
+Uh, of course you can lose a lot of
+money very quickly u um if you have uh
+stale code etc etc something goes wrong
+in your system that is a failure with
+the sandbox that you should be operating
+within it is completely irrelevant to
+the explanability of the price you were
+using in that given point in time if
+that price is bounded by epsilon
+>> we are not a trading company and uh so I
+would probably not be very correct if I
+talk about the regulator is very
+concerned about anything related to
+that. So I I don't feel like taking
+this. Uh I'm can say that in some cases
+it is very well uh appreciated by some
+clients where if we can explain give
+them a feeling of what the model is
+considering like models that allow you
+to understand you know feature
+importance just to be very very simple
+and so what are the the data that are
+most influencing the decision of the
+models is something which is very
+relevant. Definitely these models have
+uh enable even a single guy to implement
+from scratch a whole pipeline that goes
+from the data to the final strategy and
+so on. Uh typically what is
+recommendable according to my opinion is
+that in terms of the data pipeline
+should not be left to a single guy. I
+mean even in the small companies there
+should be someone accountable for data
+and the coherence of the data and the
+data quality and from that you know you
+can source the data into strategies but
+the temptation is since you can easily
+do a lot of things now a single human
+does the whole process and that could be
+risky terms of quality in terms of uh
+overlooking some pitfalls and so on.
+being on the risk committees and meeting
+with federal regulators at a variety of
+institutions. I would disagree with
+Peter. Um explanability I think is the
+core of finance. Without it, you are not
+doing finance. You're not doing quant
+finance. I think you're just kind of
+gambling. And to your point, there are a
+lot of big funds that are doing that. Um
+but we'll see deviations, right? You are
+bound by some model and it seems
+reasonable, but if something blows up, I
+mean LTCM always comes to mind. It's a
+common example. if we see some sort of
+giant deviation, we have large losses.
+Like how is that going to be explained
+to the public? How's that going to be
+explained to the government? Because I
+mean, they're not finance people, they
+don't understand it. And typically, we
+get hit with regulations after we have a
+public issue. I mean, imagine some big
+fund does that. It explodes. Um, I think
+regulation is lax right now given our
+political environment as well. So I
+think hedge funds are running for the
+hills right now trying to capture on
+that but I think we will see a swing
+back once something kind of blows up.
+>> The regulation will follow of course
+regulation will follow with the lag
+compared to what's there right now right
+with the changing in AI landscape for
+example here in India uh sebi is asking
+uh stock brokers who are using uh any
+form of uh AI models to suggest trades
+to their customers. Now they've still
+not yet gone down the route of asking to
+explain this but uh that'll come down at
+some point of time right of course
+trading firms need to have like some
+form of AI governance policy skill
+switches etc. uh we'll have to see how
+that plays out. You also have to look at
+the data aggress fee right that if
+you're using public available model uh
+you have risk of data leakages etc. But
+once you set up a decent enough scale,
+then you have to start looking at that.
