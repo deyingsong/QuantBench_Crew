@@ -1,0 +1,15 @@
+---
+title: "Let's start building a Quant Community | Calling all quants"
+video_id: "AiXcTE4YmP8"
+url: "https://www.youtube.com/watch?v=AiXcTE4YmP8"
+duration: "2:54"
+source: "NotebookLM YouTube transcript import"
+---
+
+# Let's start building a Quant Community | Calling all quants
+
+[Watch on YouTube](https://www.youtube.com/watch?v=AiXcTE4YmP8)
+
+## Transcript
+
+g'day youtube it's asx portfolio here now today i wanted to talk to you about the patreon community that i'm starting up i'm doing this because it's going to be an easy way for you guys my followers to support the content that i do obviously i don't earn a lot of money by putting these videos together and as many of you have mentioned it is an underrated channel but i really enjoy making these quantitative finance videos and providing value to you guys now the value that i'm going to provide on the patreon community are going to be by three tiers so the first is just one australian dollar per month now here i really want to get as many people as possible who are interested in asking questions about financial analytics asking questions about derivative pricing asking questions and anything and all quantitative finance so here you're going to get access to the discord channel now on our discord server we discuss topics that everyone can contribute to on a number of quantitative problems like where to get open access data trading monte carlo simulations option pricing implied volatility machine learning quant strategies so again this pricing tier is one dollar and really it's just a small contribution in becoming part of a quant community now the second tier is the lead quants now this is six dollars a month here you're going to get access to all my existing and future jupiter notebooks in an easy to use way through google colab this means that you don't need to download python or manage any environments or complex packages you just get access and then start running the code straight away now of course you can download these notebooks and use the code as you wish locally for your own pet projects now the largest support that you could provide the channel is the quant portfolio manager tier and here this is 50 um australian per month and what you get here is really personalized mentoring and the biggest value advantage here is bandwidth with me to get a one-on-one monthly 30-minute time slot where we can jump on a call on the discord channel and discuss problems that you're having ideally then we will also have another time where you can ask questions by email and i'll be able to come up with answers and make a personalized video for you regarding those questions now at the very least i'm really hoping that we can get a lot of people on this discord server and the reason is because i want people who are even more qualified and have more experience in quantitative trading and quantitative analysis than me and i'm sure there are members of the community like that who can come up with really really intelligent answers to all the questions that we're going to be asking so please get involved and i look forward to building the community together you

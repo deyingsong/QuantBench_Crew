@@ -1,0 +1,15 @@
+---
+title: "Black-Scholes Option Pricing Calculator"
+video_id: "-ghK0Rq1Msc"
+url: "https://www.youtube.com/watch?v=-ghK0Rq1Msc"
+duration: "3:20"
+source: "NotebookLM YouTube transcript import"
+---
+
+# Black-Scholes Option Pricing Calculator
+
+[Watch on YouTube](https://www.youtube.com/watch?v=-ghK0Rq1Msc)
+
+## Transcript
+
+hello and welcome back to asx options so if you've noticed um we've now hit our 100 subscribers we're pretty happy and because of the change we wanted to allow to talk about anything we want in the financial markets so we've actually rebanded the channel and called it asx portfolio so this goes in hand with a website that you can see here and here it's more generalized into anything on the asx financial markets etc so this will be able to give us a broad range of topics not just options um of course we'll still talk about options so don't worry for all of you who are more interested in that um but yeah yeah exciting we just want more flexibility in what we can discuss and and talk about here on the channel so getting into the website if you haven't checked it out yet um you got a whole bunch of stuff the landing page follows on to the learning page where you can click on whatever topics you want and find out more information now to get access to the tools behind the scenes you have to sign up for an account but it's free you just need to put in a username and a password and you're away you go so there are a number of tools but today we're going to talk about the black shells option pricing model that we actually coded up before in python so if you click on your portfolio tools button there go down to options and volatility tools pricing models so it's a pretty neat interface here and you have all your inputs that you can see the underlying price the strike price the volatility days to expiry call put and the interest rate and you can see what you can calculate here is the price and the probability of exceeding that strike okay so let's let's just say we have a stock of 40. we won a strike of 45. let's just say volatility of 30 and 70 days to expiry now if you saw there you could see that as we change the days to the of expiry right you can get a good feel for the dispersion of that stock price over time obviously the more amount of time that passes the more dispersion in the possible prices that we'll have at the end and that's just a function of square root of time or the gbm model or however you want to phrase it now if we decrease volatility of course that possible outcomes then really shrinks in um and yeah you can play around with this tool in your own time but it's it's a lot of fun hopefully it'll lead to good results in conjunction with the asx options website where you can go and see different chain rigs for um for options pricing on the asx so yeah handy little tool there gives you good um intuition of the stock price possible movements and of course the price and the probability associated with exceeding the strike so please enjoy the tool it took us a while to code up so yeah easy well yeah welcome to asx portfolio now and join us next time
