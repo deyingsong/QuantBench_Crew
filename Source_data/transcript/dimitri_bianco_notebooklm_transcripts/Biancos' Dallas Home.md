@@ -1,0 +1,15 @@
+---
+title: "Biancos' Dallas Home"
+video_id: "n3o4J4p8_Yo"
+url: "https://www.youtube.com/watch?v=n3o4J4p8_Yo"
+duration: "7:48"
+source: "NotebookLM YouTube transcript import"
+---
+
+# Biancos' Dallas Home
+
+[Watch on YouTube](https://www.youtube.com/watch?v=n3o4J4p8_Yo)
+
+## Transcript
+
+n n here we out and then on this side we have our formal dining room and then on this side we have our office which will have glass doors and that sighting will be finished a nice closet then we go over here we have another closet at the end and a guest bedroom in here which will end up having carpet has a pretty good size closet and then down the hall we have a bathroom this is the first bathroom that goes with the guest bedroom another closet Ling closet and all these are going to be hardw down this Hall but all the guest rooms will have herpet and here's the second guest bedroom and here's kind of our Jack and gel bathroom each room has a sink and here's the toilet and our bathtub here's another sink um a walk-in clock ET it's pretty large for this room I think the other room has a walking closet too but I missed that one and then here's our other second best guest bedroom or just another bedroom that's hooked yeah thir bedroom and then this is back in the hallway and then these are going to be all hardwood floors in here this is our living room with our fireplace has a light on the top if we put a photo or something up there I believe it's a wood burning fireplace so this will be pretty fun and cool to have here's our backyard we have this kind of tiny covered area and then our yard goes back close to the street out there here's our kitchen well here's a breakfast neck that we're going to have too um this is our kitchen and then right here they're actually going to cut a hole in the counter and put the stove top in and we have a Pantry in here and then our refrigerator will go here this cool little Nook here which may I'll put like a espresso machine or toaster or something and then here we're going to have a double oven and I think like a microwave or something will go in there that we have some area too to put uh benches or like stools and this goes into the master bedroom and there's another closet and this will all be harded as well these are the windows and the master again that's our backyard so our bedroom's pretty big and we have a closet here a walk-in closet which is huge so have lots of this place to hang stuff and then this leads into our master bathroom this has tile floors and again they're not quite done with it has a pebble finished window nice big bathtub another vanity um a walk-in shower which has a bench seat to be kind of nice and again all of our ceilings are like 10 or 12 ft and then we have the bathroom all right and then if we go back to the kitchen now this where our laundry room will be it's got some nice storage on top um or hookups this door goes into the garage and this is our three car garage with our double water heater our garage has a couple windows in it and that's kind of it
