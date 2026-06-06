@@ -1,0 +1,15 @@
+---
+title: "Scheduling and Order Parameters | Blueshift Visual Programming Tutorial"
+video_id: "djheRnTCu4U"
+url: "https://www.youtube.com/watch?v=djheRnTCu4U"
+duration: "3:23"
+source: "NotebookLM YouTube transcript import"
+---
+
+# Scheduling and Order Parameters | Blueshift Visual Programming Tutorial
+
+[Watch on YouTube](https://www.youtube.com/watch?v=djheRnTCu4U)
+
+## Transcript
+
+welcome to this video on scheduling and Order parameters after this video you will be able to run your strategy at the time and frequency of your choice differentiate between a market order and limit order specify take profit and stop loss you have already constructed the crossover strategy but when should this strategy run how many times in a trading day should the strategy execute if you want the strategy to run every day at every minutes then do you need to manually start and stop it every 5 minutes obviously not everything is taken care of by using the scheduling block the schedule action at block checks a particular scheduling Rule and performs the actions contained in it you can schedule the function which is run at a fixed time in day for example you can schedule the function at 115 or 20 minutes after the market opens every day you can also set a recurring schedule for example you can call the function every 10 minutes how to schedule the crossover strategy to run every day 5 minutes after the Market opens you can drag and drop the schedule action at Block in your workspace then connect the schedule date and schedule time block to schedule action at click on the schedule date and select every day click on schedule time and Select Market open enter zero in the hours field and five in the minute field you need to add the action to execute in the schedule block disconnect the trading rules blocks from the strategy then connect it to the action part of the schedule block connect the schedule block back to the trading rule step the fourth step is to define the order parameters all orders are Market orders by default Market order means that when you buy or sell an asset the order gets executed at the current market price but sometimes you may want to trade at a pre-specified price only this type of order is called a limit order you can specify a limit order using the order type Block in the Define orders menu for a limit order you will need select limit order type then set the limit price and the order order validity in case the order remains unfulfilled you can also stop a trade if your portfolio suffers a specified amount of loss this is called stop loss criteria similarly you can book profits if your portfolio is making a specified amount of profit this is called a takeprofit criteria for both take profit and stop loss you can specify the amount as a percentage of the portfolio or an absolute dollar amount in the crossover strategy you will not use these options as you are placing simple Market orders you can use these order parameters in complex strategies click on the save strategy button to save your work that is all for this video coming up next is how to check the performance of this strategy and start live Trading

@@ -1,0 +1,15 @@
+---
+title: "Machine Learning For Traders: Importing Python Libraries"
+video_id: "oG4ks-9zYn8"
+url: "https://www.youtube.com/watch?v=oG4ks-9zYn8"
+duration: "3:25"
+source: "NotebookLM YouTube transcript import"
+---
+
+# Machine Learning For Traders: Importing Python Libraries
+
+[Watch on YouTube](https://www.youtube.com/watch?v=oG4ks-9zYn8)
+
+## Transcript
+
+welcome back in the previous video we understood some terms related to machine learning today we have an interesting video for you let's start in this video you will learn how to import the required libraries first we import pandas pandas is an open-source BSD license library providing high-performance easy to use data structures and data analysis tools for the Python programming language we use an alias PD for referencing the entire pandas library next we important um PI numpy can be used as an efficient multi-dimensional container of generic data arbitrary data types can be defined this allows numpy to seamlessly and speedily integrate with a wide variety of databases we will use the alias and Pete for numpy next we import the pipe plot package from matplotlib library this package is used in plotting the data such as a scatter plot or line plot we will use PLT as an alias for this now we will import the day to reader feature from the pandas to fetch the stock data please note that the code used in the new version of pandas is different from the older version here we will import the data function from data reader package and assign an alias as web next we will be importing five different packages from the SK learn library SK learn is short for scikit-learn now we import the linear model package which contains the linear regression function next we import the pre-processing package and from this we import the standard scalar function this will be used to adjust the input parameters to the same scale next we import the pre-processing package and from this we import the impute are function to replace all the enna and values next we import the grid search function from the model selection package and finally let's import the last function that is the pipeline we will import it from the pipeline package now we will learn how to fetch the data using data reader the data reader package of the pandas library is an inbuilt function that can connect to a user-defined server and pull the data of a specified stock index or a commodity let's use this function and pull the ohlc data of an ETF linked to S&P 500 index the symbol for this fund is SP why if you want to get data for a specific time period then you would need to specify the start and end parameters as the starting and ending dates for that time period then we will select only the ohlc values from the data and save it in a data frame called DF the data frame contains entries that are not a number or n n we will drop such data using drop n a function in the next video we will learn how a classification algorithm works if you found this content helpful do share it with your peers and subscribe to our channel to receive more such content

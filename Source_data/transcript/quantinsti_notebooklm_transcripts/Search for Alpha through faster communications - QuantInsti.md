@@ -1,0 +1,15 @@
+---
+title: "Search for Alpha through faster communications - QuantInsti"
+video_id: "JosjbLPnfp0"
+url: "https://www.youtube.com/watch?v=JosjbLPnfp0"
+duration: "3:09"
+source: "NotebookLM YouTube transcript import"
+---
+
+# Search for Alpha through faster communications - QuantInsti
+
+[Watch on YouTube](https://www.youtube.com/watch?v=JosjbLPnfp0)
+
+## Transcript
+
+so I would essentially want to talk about Alpha now Alpha is nothing but uh Alpha is nothing but the ability to predict future or ability to make more money than a naive forecast so let's say that I'm am just tossing coins okay and there is a 5050 probability of 5.5 probability of a head or a tail but if I could in some way say that this is heads are going the pro of a head is 0.55 and her tail is 045 I have got an alpha and finding the job of the finding Alpha is the job of a Quant research analyst so it's it essentially boils down to how can you make uh more money than a KNE forecast and that is essentially what Alpha now Alpha can come in many ways okay so the first and the most naive aspect of alpha is speed now let's say that data is being released from a source and there are two Traders one gets the data faster the second gets the data slower the the one who is getting data faster can always make better decision making because he's getting the information first so speed is the simplest of all sources of alpha that is why you will see that there is so much money being invested into better uh facilities for trading and their collocation faster micro faster Communications using microwave or Optic fiber or dark fibers and things like that so therefore the simplest way of doing is speed and it's very very you know objective you have reduced your time from 0.5 millisecs to 045 milliseconds so that is very objective uh then the other sources of alpha is either informational so let's say I have knowledge of local Traders in Bombay which not every body has and if I know what they are doing in the markets I have a proprietary information source so therefore I can take a better decision about this than other Traders if I have tick by tick data I have a better source of information if I have extra sources so let's say I have better sources in government of India who can tell me more about uh decision of a company and how it will affected then have an extreme source so this is known as informational Alpha you have better source of information and that is the source of your profit the third thing could be a modeling Alpha so let's say I'm trading derivatives and I have got a better trading model or better hedging model for derivatives than other people therefore I can make more money because I have a better hedging model or I have got a better valuation methodology so I can price something better so therefore these models provide you the trading Edge and therefore this is know as modeling Alpha there are three types of Alpha Speed information and model and all of them invol substantial engineering or technological resources so therefore you have a better Head Start in terms because this is what we have been trained for

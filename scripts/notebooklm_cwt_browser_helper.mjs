@@ -199,26 +199,31 @@ export async function setupCwtNotebookLm({
   }
 
   async function importUrl(video) {
+    await importUrls([video]);
+  }
+
+  async function importUrls(batch) {
     await openWebsiteDialog();
     const urlBox = tab.playwright.getByRole("textbox", { name: "Enter URLs" });
     if ((await urlBox.count()) !== 1) {
       throw new Error(`URL textbox unavailable\n${await snapshotText(4000)}`);
     }
-    await urlBox.fill(video.url, {});
+    await urlBox.fill(batch.map((video) => video.url).join("\n"), {});
     const insert = tab.playwright.getByRole("button", { name: "Insert" });
     if ((await insert.count()) !== 1) throw new Error("Insert unavailable");
-    if (!(await insert.isEnabled())) throw new Error(`Insert disabled for ${video.url}`);
+    if (!(await insert.isEnabled())) throw new Error(`Insert disabled for ${batch.length} URLs`);
     await insert.click({});
 
-    const deadline = Date.now() + 45000;
+    const deadline = Date.now() + Math.max(45000, batch.length * 15000);
     let last = "";
     while (Date.now() < deadline) {
       await tab.playwright.waitForTimeout(1200);
       last = await tab.playwright.domSnapshot();
-      const sourceListSuccess =
-        normalizeUiText(last).includes(normalizeUiText(video.title)) &&
-        last.includes("Select all sources");
-      const chatSuccess = last.includes("1 source") && last.includes('tabpanel "Chat"');
+      const importedCount = batch.filter((video) =>
+        normalizeUiText(last).includes(normalizeUiText(video.title)),
+      ).length;
+      const sourceListSuccess = importedCount === batch.length && last.includes("Select all sources");
+      const chatSuccess = last.includes(`${batch.length} sources`) && last.includes('tabpanel "Chat"');
       if (sourceListSuccess || chatSuccess) {
         await ensureSourcesList();
         return;
@@ -227,7 +232,7 @@ export async function setupCwtNotebookLm({
         throw new Error(`NotebookLM import failure UI: ${last.slice(0, 4000)}`);
       }
     }
-    throw new Error(`Timed out waiting for imported source or chat summary: ${video.title}\n${last.slice(0, 5000)}`);
+    throw new Error(`Timed out waiting for ${batch.length} imported sources\n${last.slice(0, 5000)}`);
   }
 
   async function openImportedSource(video) {
@@ -421,5 +426,178 @@ export async function setupCwtNotebookLm({
     };
   }
 
-  return { videos, outDir, statusPath, runBatch, processVideo, createFreshNotebook };
+  async function runGroupedBatch(startIndex1Based, count, groupSize = 8) {
+    await fs.mkdir(outDir, { recursive: true });
+    const usedNames = new Set((await fs.readdir(outDir).catch(() => [])).filter((file) => file.endsWith(".md")));
+    const selected = videos.slice(startIndex1Based - 1, startIndex1Based - 1 + count);
+    const results = [];
+
+    for (let offset = 0; offset < selected.length; offset += groupSize) {
+      const group = selected.slice(offset, offset + groupSize);
+      const pending = [];
+      for (const video of group) {
+        const existing = await existingTranscriptForVideo(video);
+        if (existing) {
+          results.push({ status: "skipped", index: video.index, video_id: video.video_id, title: video.title, file: existing.file });
+        } else {
+          pending.push(video);
+        }
+      }
+      if (!pending.length) continue;
+
+      try {
+        await createFreshNotebook();
+        await importUrls(pending);
+      } catch (err) {
+        for (const video of pending) {
+          const result = {
+            status: "error",
+            index: video.index,
+            video_id: video.video_id,
+            title: video.title,
+            url: video.url,
+            reason: `group import: ${String((err && err.stack) || err).slice(0, 7000)}`,
+          };
+          results.push(result);
+          await fs.appendFile(statusPath, `${JSON.stringify(result)}\n`, "utf8");
+        }
+        continue;
+      }
+
+      for (const video of pending) {
+        try {
+          await openImportedSource(video);
+          const transcript = await extractTranscript();
+          const file = await saveTranscript(video, transcript, usedNames);
+          const result = { status: "saved", index: video.index, video_id: video.video_id, title: video.title, file, chars: transcript.length };
+          results.push(result);
+          await fs.appendFile(statusPath, `${JSON.stringify(result)}\n`, "utf8");
+          await ensureSourcesList();
+        } catch (err) {
+          const result = {
+            status: "error",
+            index: video.index,
+            video_id: video.video_id,
+            title: video.title,
+            url: video.url,
+            reason: String((err && err.stack) || err).slice(0, 8000),
+          };
+          results.push(result);
+          await fs.appendFile(statusPath, `${JSON.stringify(result)}\n`, "utf8");
+          await ensureSourcesList().catch(() => false);
+        }
+      }
+    }
+
+    return {
+      outDir,
+      statusPath,
+      start: startIndex1Based,
+      count,
+      saved: results.filter((item) => item.status === "saved").length,
+      skipped: results.filter((item) => item.status === "skipped").length,
+      errors: results.filter((item) => item.status === "error").length,
+      results,
+    };
+  }
+
+  async function runIndexes(indexes) {
+    const results = [];
+    for (const index of indexes) {
+      const batch = await runGroupedBatch(index, 1, 1);
+      results.push(...batch.results);
+    }
+    return {
+      outDir,
+      statusPath,
+      saved: results.filter((item) => item.status === "saved").length,
+      skipped: results.filter((item) => item.status === "skipped").length,
+      errors: results.filter((item) => item.status === "error").length,
+      results,
+    };
+  }
+
+  async function runVariantIndexes(indexes, variant = "short") {
+    const originals = new Map();
+    for (const index of indexes) {
+      const video = videos[index - 1];
+      originals.set(video, video.url);
+      video.url = variant === "embed"
+        ? `https://www.youtube.com/embed/${video.video_id}`
+        : `https://youtu.be/${video.video_id}`;
+    }
+    try {
+      return await runIndexes(indexes);
+    } finally {
+      for (const [video, url] of originals) video.url = url;
+    }
+  }
+
+  async function runIndexGroups(indexes, groupSize = 6) {
+    await fs.mkdir(outDir, { recursive: true });
+    const usedNames = new Set((await fs.readdir(outDir).catch(() => [])).filter((file) => file.endsWith(".md")));
+    const results = [];
+    for (let offset = 0; offset < indexes.length; offset += groupSize) {
+      const group = indexes.slice(offset, offset + groupSize).map((index) => videos[index - 1]);
+      const pending = [];
+      for (const video of group) {
+        const existing = await existingTranscriptForVideo(video);
+        if (existing) {
+          results.push({ status: "skipped", index: video.index, video_id: video.video_id, title: video.title, file: existing.file });
+        } else {
+          pending.push(video);
+        }
+      }
+      if (!pending.length) continue;
+
+      try {
+        await createFreshNotebook();
+        await importUrls(pending);
+      } catch (err) {
+        for (const video of pending) {
+          const result = { status: "error", index: video.index, video_id: video.video_id, title: video.title, url: video.url, reason: String((err && err.stack) || err).slice(0, 8000) };
+          results.push(result);
+          await fs.appendFile(statusPath, `${JSON.stringify(result)}\n`, "utf8");
+        }
+        continue;
+      }
+      for (const video of pending) {
+        try {
+          await openImportedSource(video);
+          const transcript = await extractTranscript();
+          const file = await saveTranscript(video, transcript, usedNames);
+          const result = { status: "saved", index: video.index, video_id: video.video_id, title: video.title, file, chars: transcript.length };
+          results.push(result);
+          await fs.appendFile(statusPath, `${JSON.stringify(result)}\n`, "utf8");
+          await ensureSourcesList();
+        } catch (err) {
+          const result = { status: "error", index: video.index, video_id: video.video_id, title: video.title, url: video.url, reason: String((err && err.stack) || err).slice(0, 8000) };
+          results.push(result);
+          await fs.appendFile(statusPath, `${JSON.stringify(result)}\n`, "utf8");
+          await ensureSourcesList().catch(() => false);
+        }
+      }
+    }
+    return {
+      outDir,
+      statusPath,
+      saved: results.filter((item) => item.status === "saved").length,
+      skipped: results.filter((item) => item.status === "skipped").length,
+      errors: results.filter((item) => item.status === "error").length,
+      results,
+    };
+  }
+
+  return {
+    videos,
+    outDir,
+    statusPath,
+    runBatch,
+    runGroupedBatch,
+    runIndexes,
+    runIndexGroups,
+    runVariantIndexes,
+    processVideo,
+    createFreshNotebook,
+  };
 }
