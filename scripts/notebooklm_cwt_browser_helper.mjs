@@ -223,7 +223,9 @@ export async function setupCwtNotebookLm({
         normalizeUiText(last).includes(normalizeUiText(video.title)),
       ).length;
       const sourceListSuccess = importedCount === batch.length && last.includes("Select all sources");
-      const chatSuccess = last.includes(`${batch.length} sources`) && last.includes('tabpanel "Chat"');
+      const chatSuccess =
+        last.includes(`${batch.length} sources`) &&
+        (last.includes('tabpanel "Chat"') || last.includes('heading "Chat"'));
       if (sourceListSuccess || chatSuccess) {
         await ensureSourcesList();
         return;
