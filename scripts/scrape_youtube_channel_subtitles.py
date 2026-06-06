@@ -19,6 +19,7 @@ from typing import Any, Iterable
 import yt_dlp
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import (
+    IpBlocked,
     NoTranscriptFound,
     TranscriptsDisabled,
     VideoUnavailable,
@@ -363,9 +364,35 @@ def write_index(index_path: Path, rows: list[dict[str, Any]]) -> None:
             "caption_source",
             "reason",
         ]
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer = csv.DictWriter(file, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
+
+
+def rebuild_index(output_dir: Path, videos: list[dict[str, Any]]) -> None:
+    transcripts: dict[str, Path] = {}
+    for path in output_dir.glob("*.md"):
+        match = re.search(r'^video_id: "([^"]+)"$', path.read_text(encoding="utf-8"), flags=re.MULTILINE)
+        if match:
+            transcripts[match.group(1)] = path
+
+    rows = []
+    for video in videos:
+        video_id = video["id"]
+        output_path = transcripts.get(video_id)
+        rows.append(
+            {
+                "status": "saved" if output_path else "missing",
+                "video_id": video_id,
+                "title": video.get("title") or "Untitled",
+                "url": f"https://www.youtube.com/watch?v={video_id}",
+                "output_file": str(output_path) if output_path else "",
+                "caption_language": "",
+                "caption_source": "",
+                "reason": "" if output_path else "not_fetched_or_no_public_english_caption",
+            }
+        )
+    write_index(output_dir / "transcript_index.csv", rows)
 
 
 def scrape_channel(
@@ -376,7 +403,9 @@ def scrape_channel(
     sleep_seconds: float,
     overwrite: bool,
     method: str,
+    start_index: int,
     limit: int | None,
+    index_only: bool,
     allow_remote_components: bool,
     cookies_file: str | None,
     cookies_from_browser: str | None,
@@ -397,16 +426,22 @@ def scrape_channel(
     else:
         print(f"Fetching video list from {channel_url}")
         videos = get_channel_videos(channel_url)
+        videos = videos[start_index - 1 :]
         if limit is not None:
             videos = videos[:limit]
         print(f"Found {len(videos)} public video entries.")
+
+    if index_only:
+        rebuild_index(output_dir, videos)
+        print(f"Rebuilt index: {(output_dir / 'transcript_index.csv').resolve()}")
+        return
 
     rows: list[dict[str, Any]] = []
     success_count = 0
     skipped_count = 0
     error_count = 0
 
-    for index, video in enumerate(videos, start=1):
+    for index, video in enumerate(videos, start=start_index):
         video_id = video["id"]
         title = video.get("title") or "Untitled"
         video_url = f"https://www.youtube.com/watch?v={video_id}"
@@ -457,6 +492,8 @@ def scrape_channel(
                 try:
                     transcript = getter(*params)
                     break
+                except IpBlocked:
+                    raise
                 except Exception as exc:  # noqa: BLE001 - fall back across public caption methods.
                     errors.append(f"{getter.__name__}: {exc.__class__.__name__}")
 
@@ -477,6 +514,9 @@ def scrape_channel(
                     "reason": "",
                 }
             )
+        except IpBlocked:
+            print("  rate limited: stopping batch so it can be resumed later")
+            break
         except (NoTranscriptFound, TranscriptsDisabled, VideoUnavailable) as exc:
             print(f"  unavailable: {exc}")
             error_count += 1
@@ -528,7 +568,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--languages", nargs="+", default=["en", "en-US", "en-GB"])
     parser.add_argument("--sleep-seconds", type=float, default=1.5)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--start-index", type=int, default=1)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--index-only", action="store_true", help="Rebuild the transcript index without fetching captions.")
     parser.add_argument(
         "--allow-remote-components",
         action="store_true",
@@ -559,7 +601,9 @@ def main() -> None:
         sleep_seconds=args.sleep_seconds,
         overwrite=args.overwrite,
         method=args.method,
+        start_index=args.start_index,
         limit=args.limit,
+        index_only=args.index_only,
         allow_remote_components=args.allow_remote_components,
         cookies_file=args.cookies_file,
         cookies_from_browser=args.cookies_from_browser,
