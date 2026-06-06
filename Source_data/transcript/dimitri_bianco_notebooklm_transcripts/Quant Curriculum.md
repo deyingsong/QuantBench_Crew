@@ -1,0 +1,15 @@
+---
+title: "Quant Curriculum"
+video_id: "tmh8waHDWx0"
+url: "https://www.youtube.com/watch?v=tmh8waHDWx0"
+duration: "2:48"
+source: "NotebookLM YouTube transcript import"
+---
+
+# Quant Curriculum
+
+[Watch on YouTube](https://www.youtube.com/watch?v=tmh8waHDWx0)
+
+## Transcript
+
+so we've covered curriculum a bit where we talk about the rigor and i made a video on it and some of the other directors from one of the top 10 top 15 programs commented on it and he talked about the same thing which is like we want to measure rigor but it's extremely hard to measure it there's no easy way to say like my program is you know rigor of 90 out of 100 and your programs is a rigor of 85 out of 100 it's just really hard to measure and it's really hard to do it's why a lot of times i don't like ranking programs but if i do i require i go on campus i sit in the classrooms i listen to the professors i want to see the interaction the students have and then i interview students afterwards and like i really want to know that the details because i had students like complaining to me because there's no professors around just me and a student just sitting there chatting about you know how's the program going what do you like about it but again coming back to that curriculum part it's really hard to rank curriculum it's really hard to judge it but at the same time you want to make sure at least for me one of the indications here is when you see a ton of finance classes listed it's it's not going to be a financial engineering program because the students that we find that do the best when you hire them in industry are those that are very uh like theoretically driven so i can teach you how to do math and stats and it's not necessarily applied but a lot of times when you take the applied courses what ends up happening is that they they get in a mindset where they can't think outside of that application so one of the best examples here is um for example like the genie coefficient and so i work in credit risk for some of my jobs i've done and people in the industry are convinced like genie coefficient is invented and created in credit risk and that's the only place you can use it and so then i have this argument with i'm like hey i have an economics background i was actually invented to do you know income inequality so you can start looking at like the genie coefficient and start talking about it and they're shocked that you can apply it to different things but again having a lot of theoretical rigor in the curriculum i think it's important even though like when i graduated i thought this is a waste of time i took way too much math it's not going to be applicable but when they start throwing you into different areas and different jobs you really start being able to connect the dots quicker than somebody that might have been trained to do a specific calculation in a specific industry so in general curriculum-wise i like to see math and stats i hate seeing business and finance classes because the mba classes i took that were the finance classes were word for word textbook for textbook the exact same class i took in my undergrad for finance

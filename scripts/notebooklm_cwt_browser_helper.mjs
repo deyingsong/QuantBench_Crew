@@ -213,7 +213,7 @@ export async function setupCwtNotebookLm({
     const deadline = Date.now() + 45000;
     let last = "";
     while (Date.now() < deadline) {
-      await tab.playwright.waitForTimeout(3000);
+      await tab.playwright.waitForTimeout(1200);
       last = await tab.playwright.domSnapshot();
       const sourceListSuccess =
         normalizeUiText(last).includes(normalizeUiText(video.title)) &&
@@ -239,7 +239,7 @@ export async function setupCwtNotebookLm({
       count = await source.count();
     }
     if (count !== 1) {
-      await tab.playwright.waitForTimeout(3000);
+      await tab.playwright.waitForTimeout(1500);
       source = tab.playwright.getByRole("button", { name: video.title });
       count = await source.count();
       if (count !== 1) {
@@ -257,7 +257,7 @@ export async function setupCwtNotebookLm({
         throw new Error(`Imported source button count for exact title: ${count}\n${await snapshotText(6000)}`);
       }
       await tab.dom_cua.click({ node_id: sourceMatch[1] });
-      await tab.playwright.waitForTimeout(3500);
+      await tab.playwright.waitForTimeout(1800);
       const snap = await tab.playwright.domSnapshot();
       if (snap.includes("Source guide")) return;
       throw new Error(`Source DOM click did not open source guide: ${video.title}\n${snap.slice(0, 6000)}`);
@@ -267,7 +267,7 @@ export async function setupCwtNotebookLm({
       if (attempt === 2) await source.dblclick({});
       else if (attempt === 4) await source.press("Enter", {});
       else await source.click({});
-      await tab.playwright.waitForTimeout(3500);
+      await tab.playwright.waitForTimeout(1800);
       last = await tab.playwright.domSnapshot();
       if (last.includes("Source guide")) return;
     }
@@ -291,7 +291,7 @@ export async function setupCwtNotebookLm({
         return candidates.find((item) => !item.includes("NotebookLM") && !item.includes("SourcesChatStudio")) || candidates[0] || "";
       }, undefined, { timeoutMs: 20000 });
       if (best.length > 300) return best;
-      await tab.playwright.waitForTimeout(2500);
+      await tab.playwright.waitForTimeout(1200);
     }
     throw new Error(`Timed out waiting for transcript text; best length=${best.length}\n${await snapshotText(5000)}`);
   }
@@ -343,7 +343,7 @@ export async function setupCwtNotebookLm({
         throw new Error(`Delete confirm unavailable\n${await snapshotText(5000)}`);
       }
       await del.click({});
-      await tab.playwright.waitForTimeout(1800);
+      await tab.playwright.waitForTimeout(900);
     }
     throw new Error(`Could not remove all sources\n${await snapshotText(5000)}`);
   }
@@ -353,7 +353,19 @@ export async function setupCwtNotebookLm({
     await openImportedSource(video);
     const transcript = await extractTranscript();
     const file = await saveTranscript(video, transcript, usedNames);
-    await removeOnlySource();
+    try {
+      await removeOnlySource();
+    } catch (err) {
+      return {
+        status: "saved",
+        index: video.index,
+        video_id: video.video_id,
+        title: video.title,
+        file,
+        chars: transcript.length,
+        cleanup_warning: String((err && err.message) || err).split("\n", 1)[0],
+      };
+    }
     return { status: "saved", index: video.index, video_id: video.video_id, title: video.title, file, chars: transcript.length };
   }
 

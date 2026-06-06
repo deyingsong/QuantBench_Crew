@@ -1,0 +1,15 @@
+---
+title: "Repeat Function in R (E10)"
+video_id: "nslDvw0HyXQ"
+url: "https://www.youtube.com/watch?v=nslDvw0HyXQ"
+duration: "3:48"
+source: "NotebookLM YouTube transcript import"
+---
+
+# Repeat Function in R (E10)
+
+[Watch on YouTube](https://www.youtube.com/watch?v=nslDvw0HyXQ)
+
+## Transcript
+
+hey YouTube it's Dimitri and in the last video here we did the sequence function in this video we're gonna do the repeat function but both of these kind of go hand-in-hand the reason I'm introducing these simple functions is because they can be quite useful for just generating data for testing experimenting or kind of doing manipulations but today like I mentioned we're gonna do repeat and again right this is the repeat function the way the function works is you type and repeat and it's going to be some values I'm just gonna call it value it's gonna be X amount of times however many times you have so let's just do a quick example here let's say I want to create a new vector and I want to repeat I don't know the number three ten times okay all right well print it out here in a second so it's copy and paste so you can see three here's repeated ten times one two three four five six seven eight nine and ten so that repeats that three times app again you can do I don't know you can do vectors vectors or repeat so let's just do something a little more exciting because making a bunch of threes isn't too exciting let's say we're gonna have Y and we're gonna create so some vector here we're gonna call it six twelve I don't have 16 and we can print this out and show you this real quick right six twelve and sixteen and then let's say we're gonna create Z but I want to repeat Y but I want to do it at and I would say three times so we should have six twelve sixteen is six twelve sixteen six twelve sixteen and again we're gonna print out Z so you can see copy and paste and you see we have six twelve sixteen and we have this three unique times all right the last thing here is we have an each statement inside the repeat function so let's say we're going to create some lists I don't know but we want to do it such that let's create a list first here and say 5 to 4 and I don't know 9 and we want to actually repeat this but each one's we done multiple times so let's say I want 5 done 3 times each ok this is kind of ridiculous but we're gonna do it here that we're gonna do repeat a we're gonna say each equals 2 and we're gonna run this real quick and then we'll type in B to print out B and you can see here right each one's done twice so we have five five two two four four nine nine anyways that's kind of the simple repeat function it's not super useful but it is a way to generate data and if I'm going to present to you guys the sequence function in the last video in this video we should do the repeat function there are cases where you'd want to run something maybe multiple times in a row again I think using the each statements probably the most useful thing in the repeat function so anyways thanks for watching don't forget to Like share and subscribe and as always until next time
