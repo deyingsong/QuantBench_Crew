@@ -524,6 +524,8 @@ export async function setupCwtNotebookLm({
       originals.set(video, video.url);
       video.url = variant === "embed"
         ? `https://www.youtube.com/embed/${video.video_id}`
+        : variant === "mobile"
+          ? `https://m.youtube.com/watch?v=${video.video_id}`
         : `https://youtu.be/${video.video_id}`;
     }
     try {
