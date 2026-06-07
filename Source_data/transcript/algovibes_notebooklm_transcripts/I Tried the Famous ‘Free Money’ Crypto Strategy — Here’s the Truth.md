@@ -1,0 +1,15 @@
+---
+title: "I Tried the Famous ‘Free Money’ Crypto Strategy — Here’s the Truth"
+video_id: "sV_B03EfZLw"
+url: "https://www.youtube.com/watch?v=sV_B03EfZLw"
+duration: "4:01"
+source: "NotebookLM YouTube transcript import"
+---
+
+# I Tried the Famous ‘Free Money’ Crypto Strategy — Here’s the Truth
+
+[Watch on YouTube](https://www.youtube.com/watch?v=sV_B03EfZLw)
+
+## Transcript
+
+there is a delta neutral crypto trade that gets discussed a lot you buy one bitcoin on spot you short one bitcoin perpetual future and you collect the funding payments in theory the direction doesn't matter if Bitcoin goes up or down one leg offsets the other i wanted to double check how this actually performs so I back tested the simplest possible version using real Binance data no leverage no rebalancing no timing rules just holding both legs continuously and tracking the funding i pulled BTC USDT funding rates from Binance futures and hourly spot prices from Binance spot API funding is paid every eight hours so each funding timestamp is matched to the most recent spot close for a one bitcoin position funding P&L is just the funding rate multiplied by the spot notional summing that across the period gives the equity curve now for the results from January to late November 2025 so essentially today starting with a notional of about $93,000 the cumulative funding P&L was just under $5,000 annualized return was roughly 5.7ish% volatility basically zero which is ridiculous if you think about it sharp ratio over 30 and at this point you should note that this is too good to be true and to add on top of these ridiculous measurements the maximum draw down was close to zero now on paper again this looks incredible but these results are not realistic at all there is nothing like that there is no free lunch there is no free money if you look at the funding series itself it's noisy and often negative there's nothing stable about it the only reason the equity curves look so kind of smooth is because the model removes most real world risk which are essential just to give you an example to name a few it assumes perfect offsetting between spot and perpetual future even though the basis which is the difference between futures and spot moves all the time it uses spot price as the notional even though funding is based on the perpetuals mark price obviously it also ignores all trading costs financing costs and slippage and it doesn't model margin requirements or liquidation risk all of these matter in practice and they would make the strategy far more volatile than this back test suggests so take simple if you strip out the actual risk the strategy looks almost riskfree but that version isn't tradable if you want me to run a full realistic version this is going to be super super interesting this will include for instance perpetual OHLC data so data on the future itself therefore we also got basis P&L mark price effects fees obviously borrow cost hedge rebalancing and also margin just let me know and I'm very happy to build it in a separate video thanks a lot for watching and bye-bye
