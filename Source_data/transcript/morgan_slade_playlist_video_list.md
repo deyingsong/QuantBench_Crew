@@ -1,0 +1,16 @@
+# Morgan Slade Playlist Videos
+
+Channel: <https://youtube.com/playlist?list=PLGW3n6VnSnUTvZ39dQbkf8Px2dZzAtiKh>
+
+Total public videos: 10
+
+1. [Quant Trading and Superpowers - Morgan Slade](https://www.youtube.com/watch?v=_BiKcSseOnw) (12:13)
+2. [Trading strategies, powered by machine learning · Morgan Slade](https://www.youtube.com/watch?v=EbWbeYu8zwg) (1:10:09)
+3. [CloudQuant's Morgan Slade is streamlining how you get your data](https://www.youtube.com/watch?v=IxSnDeD8-vw) (3:42)
+4. [High Frequency Trading w/ Morgan Slade - Quant Trading Interview | 72 mins](https://www.youtube.com/watch?v=KJMJjQGoFDM) (13:28)
+5. [Can Data Scientists Save Hedge Funds? | Morgan Slade | AnacondaCON 2017](https://www.youtube.com/watch?v=4dZcSuAtZbE) (28:52)
+6. [Crowdsourcing Algo Trading – Morgan Slade](https://www.youtube.com/watch?v=3oyJUL1CREg) (27:08)
+7. [TradeTalks: Finding New Trading Talent and Data Sets](https://www.youtube.com/watch?v=Mm6wTtfZi-Y) (2:48)
+8. [SMB Quant (002): “Democratization of Trading” with Paul Tunney from CloudQuant](https://www.youtube.com/watch?v=cwMqWJO9gdA) (1:03:12)
+9. [Machine Learning for Algorithmic Trading | Part 1: Machine Learning & First Steps](https://www.youtube.com/watch?v=CwcPFUpnjms) (1:08:03)
+10. [Machine Learning for Algorithmic Trading | Part 2 Preparing Data and Training](https://www.youtube.com/watch?v=71jgyEFIPE8) (1:03:05)
