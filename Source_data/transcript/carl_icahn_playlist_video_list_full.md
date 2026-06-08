@@ -1,0 +1,32 @@
+# Carl Icahn Playlist Videos
+
+Channel: <https://youtube.com/playlist?list=PLGW3n6VnSnUTKyFLJBIKp6eumDOkb7Aez>
+
+Total public videos: 26
+
+1. [Carl Icahn - The Most Feared Man on Wall Street!](https://www.youtube.com/watch?v=Mg7PC6LforY) (23:14)
+2. [Carl Icahn billionaire investor case study](https://www.youtube.com/watch?v=l9nc4DvD-0U) (16:57)
+3. [On Investing, Markets and his Life | Carl Icahn](https://www.youtube.com/watch?v=QTgFi62FJ4k) (48:14)
+4. [DealBook Conference 2015 - Activist Investing](https://www.youtube.com/watch?v=GsN0WVLjpcs) (40:43)
+5. [Carl Icahn: The Icahn Lift Documentary with 60 Minutes](https://www.youtube.com/watch?v=02xY5M8v5jo) (13:31)
+6. [Carl Icahn Short Documentary On 60 Minutes](https://www.youtube.com/watch?v=tDH4Yeq6rHc) (22:31)
+7. [Fast 15: Carl Icahn breaks down his latest investments](https://www.youtube.com/watch?v=NQB8esGy9nM) (12:54)
+8. [Icahn on Renewables Investing, Cryptocurrencies, Allstate](https://www.youtube.com/watch?v=ZR_P3Gi3CiM) (35:36)
+9. [Full interview with Carl Icahn](https://www.youtube.com/watch?v=wiQWqzWQEpc) (32:05)
+10. [[Private video]](https://www.youtube.com/watch?v=y1PYvaCa2o4)
+11. [Carl Icahn Talks Trump, EPA Rules, Asset Markets and AIG](https://www.youtube.com/watch?v=eWT-OG1sUy8) (40:14)
+12. [Carl Icahn Takes On Apple, Tim Cook | CNBC](https://www.youtube.com/watch?v=_AAM1P-kqFs) (33:02)
+13. [Carl Icahn: "I Fired 12 Floors of People"](https://www.youtube.com/watch?v=WSatPoD2W-o) (8:35)
+14. [Carl Icahn On His Latest Investments | CNBC](https://www.youtube.com/watch?v=e-jAa1fKV1w) (26:31)
+15. [Carl Icahn's First Ever Interview | 1985](https://www.youtube.com/watch?v=w7LHY6-i22s) (14:58)
+16. [15. Guest Lecture by Carl Icahn](https://www.youtube.com/watch?v=HlfgQ4_7EYA) (42:23)
+17. [Carl Icahn 80s rare interview](https://www.youtube.com/watch?v=4yWT-R676fo) (35:19)
+18. [Carl Icahn On Bill Ackman Pulling Out Of His Position In Herbalife, President Donald Trump | CNBC](https://www.youtube.com/watch?v=q5oLUDGyHxI) (25:05)
+19. [[Private video]](https://www.youtube.com/watch?v=FcWg4897yIM)
+20. [T. Boone Pickens talks Energy, Security and Shop with Carl Icahn](https://www.youtube.com/watch?v=n2wW8DvPGto) (24:34)
+21. [Billionaire Carl Icahn on Investments, CMBX 6 Short, Oil Buy](https://www.youtube.com/watch?v=Xpj1YDUKxyE) (23:12)
+22. [Watch CNBC's full interview with billionaire activist investor Carl Icahn](https://www.youtube.com/watch?v=9FrFbpJ8BQw) (23:03)
+23. [Carl Icahn Role Shows Common Thread In Scott Pruitt Ethics, Policy Scandals | Rachel Maddow | MSNBC](https://www.youtube.com/watch?v=tA1EbehbXaY) (22:32)
+24. [Carl Icahn 80s Interview by The MacNeilLehrer NewsHour](https://www.youtube.com/watch?v=WJ9XkNqK1bs) (57:54)
+25. [104 TIP: Billionaire Carl Icahn - W/ Mark Stevens](https://www.youtube.com/watch?v=BAMIQVY6GNE) (37:32)
+26. [Financial Markets by Yale. Week 4. Guest Speaker - Carl Icahn](https://www.youtube.com/watch?v=LVpoA_Raxrw) (20:00)
