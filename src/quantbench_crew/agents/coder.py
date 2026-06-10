@@ -8,7 +8,7 @@ from typing import Any
 
 from quantbench_crew.agents import era
 from quantbench_crew.models import ImplementationPlan, PaperAnalysis
-from quantbench_crew.skills.base import Skill
+from quantbench_crew.skills.base import RunContext, Skill, SkillResult
 
 
 class QuantCoderAgent:
@@ -42,6 +42,23 @@ class QuantCoderAgent:
         )
 
         return _solution_to_plan(best_solution, analysis)
+
+    def generate(
+        self,
+        analysis: PaperAnalysis,
+        plan: ImplementationPlan,
+        ctx: "RunContext | None",
+    ) -> "SkillResult | None":
+        """Run the code generation skill for one analyzed paper.
+
+        Returns None when the skill is not enabled or no run context exists;
+        the workflow then keeps the plan-only behavior.
+        """
+
+        skill = self.skills.get("code_generation")
+        if skill is None or ctx is None:
+            return None
+        return skill.run(ctx, analysis=analysis, plan=plan)
 
 
 class _PlanGenerator:

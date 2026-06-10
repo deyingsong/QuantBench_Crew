@@ -160,6 +160,7 @@ def resolve_skills(agent: str, config: Mapping[str, Any]) -> dict[str, Skill]:
 
 # Import skill implementations so their @register_skill decorators run when
 # the package is imported. These must stay below the registry definitions.
+from quantbench_crew.skills.coder import code_generation as _coder_code_generation  # noqa: E402,F401
 from quantbench_crew.skills.reader import method_spec as _reader_method_spec  # noqa: E402,F401
 from quantbench_crew.skills.reader import pdf_acquisition as _reader_pdf_acquisition  # noqa: E402,F401
 from quantbench_crew.skills.reader import target_table as _reader_target_table  # noqa: E402,F401

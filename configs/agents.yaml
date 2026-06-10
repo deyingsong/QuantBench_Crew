@@ -14,6 +14,7 @@ llm:
   model: claude-opus-4-8
   max_tokens: 4096
   fixtures: tests/fixtures/llm_fixtures.json
+  cost_cap_usd: 2.0
 
 agents:
   quant_scout:
@@ -63,6 +64,8 @@ agents:
     skills:
       code_generation:
         enabled: false
+        iterations: 3
+        adapter: complete   # 'agent' (headless Claude Code) reserved, not yet implemented
   quant_bench:
     role: Benchmark evaluation and robustness checks
     default_metrics:

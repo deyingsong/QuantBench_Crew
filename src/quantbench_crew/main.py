@@ -137,6 +137,9 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
 
         analysis = reader.analyze(scored.paper, ctx=ctx)
         implementation_plan = coder.plan(analysis)
+        # Generated strategy artifacts land in the manifest; the bench agent
+        # starts consuming them in QB-13 (workstream D).
+        coder.generate(analysis, implementation_plan, ctx)
         benchmark_result = bench.evaluate(implementation_plan)
         report = reviewer.review(analysis, implementation_plan, benchmark_result)
         reports.append(report)

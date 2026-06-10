@@ -1,0 +1,36 @@
+Write a complete, self-contained Python module implementing the trading
+strategy specified below. It will run in a sandbox where ONLY these stdlib
+imports are allowed: math, statistics, random, datetime, itertools,
+functools, collections, json, typing, dataclasses, operator, bisect, heapq.
+Do not use eval/exec/open/getattr/setattr, dunder attribute access, file or
+network access, or a __main__ block.
+
+The module must define:
+
+    def build_strategy(params=None):
+        ...returns a strategy object...
+
+The strategy object must implement:
+- fit(data, train_end): estimate anything needed using data up to train_end.
+- weights(data, as_of): return a dict mapping asset id -> float weight,
+  using ONLY information at dates <= as_of (no lookahead, ever). Call
+  data.up_to(as_of) defensively before reading.
+
+The `data` object provides exactly this API:
+- data.dates() -> sorted tuple of datetime.date
+- data.assets() -> sorted tuple of asset id strings
+- data.value(as_of, asset, field, default=None) -> float or default
+- data.history(asset, field, end, periods) -> tuple of the last `periods`
+  values of `field` at dates <= end
+- data.up_to(as_of) -> the same panel truncated to dates <= as_of
+
+`params` is a dict that may contain: formation_periods, skip_periods,
+fraction, field. Respect them with sensible defaults. The strategy must be
+deterministic: same data and params always produce identical weights.
+
+Method specification (extracted from the paper):
+{spec_json}
+
+{feedback}
+
+Return ONLY the Python module source, in a single ```python code block.

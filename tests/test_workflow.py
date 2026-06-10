@@ -127,13 +127,14 @@ def test_rerun_with_identical_inputs_has_identical_content_hash(tmp_path: Path) 
 
 
 def _skills_enabled_config(tmp_path: Path) -> str:
-    """Shipped config with the Workstream B skills toggled on."""
+    """Shipped config with the Workstream B and C skills toggled on."""
 
     config = load_config("configs/agents.yaml")
     agents = config["agents"]
     agents["quant_scout"]["skills"]["reproducibility_triage"]["enabled"] = True
     for name in ("pdf_acquisition", "method_spec_extraction", "target_table_extraction"):
         agents["quant_reader"]["skills"][name]["enabled"] = True
+    agents["quant_coder"]["skills"]["code_generation"]["enabled"] = True
     path = tmp_path / "agents-skills.yaml"
     path.write_text(yaml.safe_dump(config), encoding="utf-8")
     return str(path)
@@ -172,12 +173,20 @@ def test_golden_paper_flows_through_enabled_skills(tmp_path: Path) -> None:
         "pdf_acquisition",
         "method_spec_extraction",
         "target_table_extraction",
+        "code_generation",
     }
     triage = next(
         entry for entry in manifest["skill_results"]
         if entry["skill"] == "reproducibility_triage"
     )
     assert triage["payload"]["passes_gate"] is True
+    codegen = next(
+        entry for entry in manifest["skill_results"]
+        if entry["skill"] == "code_generation"
+    )
+    assert codegen["status"] == "ok"
+    assert codegen["payload"]["tests_passed"] == 3
+    assert "generated/strategy.py" in manifest["artifacts"]
 
 
 def test_low_feasibility_paper_is_gated_but_audited(tmp_path: Path) -> None:
