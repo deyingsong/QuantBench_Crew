@@ -1,0 +1,10 @@
+[
+  {
+    "title": "Returns to Buying Winners and Selling Losers: A Cross-Sectional Momentum Reproduction Study",
+    "abstract": "We study cross-sectional momentum in monthly US equity returns from 1965 to 1989. Ranking NYSE and AMEX common stocks on their past 6-month returns and holding the equal-weighted winner-minus-loser decile portfolio for 6 overlapping months earns approximately 0.95% per month before transaction costs (Table 1). Monthly momentum portfolio returns are publicly available from the Kenneth French data library, and replication code is available on GitHub.",
+    "authors": ["N. Jegadeesh", "S. Titman"],
+    "keywords": ["momentum", "asset pricing", "portfolio", "cross-section"],
+    "url": null,
+    "source": "golden-local"
+  }
+]

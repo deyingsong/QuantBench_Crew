@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title type="html">ArXiv Query: search_query=(cat:q-fin.PM) AND all:momentum</title>
+  <entry>
+    <id>http://arxiv.org/abs/2401.01234v2</id>
+    <updated>2024-01-08T12:00:00Z</updated>
+    <published>2024-01-03T18:30:00Z</published>
+    <title>Momentum  Everywhere:
+   Evidence from Factor Portfolios</title>
+    <summary>  We document cross-sectional momentum across asset classes using
+  monthly portfolio data and evaluate Sharpe ratios net of costs.
+    </summary>
+    <author><name>Alice Quant</name></author>
+    <author><name>Bob Researcher</name></author>
+    <link href="http://arxiv.org/abs/2401.01234v2" rel="alternate" type="text/html"/>
+    <link title="pdf" href="http://arxiv.org/pdf/2401.01234v2" rel="related" type="application/pdf"/>
+    <category term="q-fin.PM" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-fin.ST" scheme="http://arxiv.org/schemas/atom"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2402.04567v1</id>
+    <updated>2024-02-10T09:00:00Z</updated>
+    <published>2024-02-10T09:00:00Z</published>
+    <title>Liquidity and Reversal in High-Frequency Markets</title>
+    <summary>We analyze short-horizon reversal with TAQ data.</summary>
+    <author><name>Carol Micro</name></author>
+    <link href="http://arxiv.org/abs/2402.04567v1" rel="alternate" type="text/html"/>
+    <category term="q-fin.TR" scheme="http://arxiv.org/schemas/atom"/>
+  </entry>
+</feed>

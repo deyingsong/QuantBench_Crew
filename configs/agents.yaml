@@ -30,6 +30,7 @@ agents:
         enabled: false
       reproducibility_triage:
         enabled: false
+        threshold: 0.5
   quant_reader:
     role: PaperQA2-backed paper summarization and method extraction
     rag_backbone: PaperQA2
@@ -44,8 +45,10 @@ agents:
     skills:
       pdf_acquisition:
         enabled: false
+        cache_dir: data/raw
       target_table_extraction:
         enabled: false
+        default_tolerance: 0.2
       method_spec_extraction:
         enabled: false
   quant_coder:

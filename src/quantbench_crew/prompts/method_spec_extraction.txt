@@ -1,0 +1,22 @@
+Extract an implementable method specification from this quantitative finance
+paper for a reproduction pipeline. Use only what the paper states; do not
+invent details. Where the paper is silent, use an empty string or null.
+
+Paper title: {title}
+Abstract: {abstract}
+Identified method: {proposed_method}
+Identified datasets: {datasets}
+
+Return ONLY a JSON object with exactly these keys:
+- "universe": string, the asset universe (e.g. "NYSE and AMEX common stocks")
+- "frequency": one of "daily" | "weekly" | "monthly"
+- "signal_definition": string, formula or pseudocode for the signal
+- "portfolio_construction": string (e.g. "decile long-short, equal-weighted")
+- "rebalance_frequency": string (e.g. "monthly")
+- "holding_period": string (e.g. "6 months, overlapping")
+- "sample_start": "YYYY-MM-DD" or null
+- "sample_end": "YYYY-MM-DD" or null
+- "evaluation_protocol": string, split and validation rules
+- "hyperparameters": object of named scalar choices
+- "data_requirements": array of strings naming required data sources
+- "confidence": number 0-1, your self-assessment of extraction fidelity

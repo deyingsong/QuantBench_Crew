@@ -7,6 +7,7 @@ dry workflow always runs (see docs/skills-design.md, Guiding Principles).
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
@@ -51,3 +52,16 @@ class RunContext:
     config: dict[str, Any]
     manifest: RunManifest
     llm: LLMClient | None = None
+
+
+def skill_settings(config: Mapping[str, Any], agent: str, name: str) -> dict[str, Any]:
+    """Return one skill's config entry from agents.yaml, minus ``enabled``.
+
+    Skills read their tunables (thresholds, cache dirs, tolerances) from the
+    run config at execution time, so toggling and tuning stay in one file.
+    """
+
+    agents = config.get("agents") or {}
+    skills = (agents.get(agent) or {}).get("skills") or {}
+    entry = skills.get(name) or {}
+    return {key: value for key, value in entry.items() if key != "enabled"}

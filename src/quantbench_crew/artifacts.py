@@ -20,9 +20,12 @@ import json
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from quantbench_crew.skills.base import SkillResult
+if TYPE_CHECKING:
+    # Type-only: a runtime import would be circular, because importing the
+    # skills package triggers skill-registration modules that import this one.
+    from quantbench_crew.skills.base import SkillResult
 
 MANIFEST_FILENAME = "manifest.json"
 

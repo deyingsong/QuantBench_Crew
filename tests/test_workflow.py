@@ -2,7 +2,13 @@ import json
 from argparse import Namespace
 from pathlib import Path
 
+import pytest
+import yaml
+
+from quantbench_crew.config import load_config
 from quantbench_crew.main import run_workflow, write_reports
+
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_run_workflow_returns_review_reports() -> None:
@@ -118,3 +124,91 @@ def test_rerun_with_identical_inputs_has_identical_content_hash(tmp_path: Path) 
     second = _load_manifests(tmp_path / "runs-b")[0]
     assert first["run_id"] != second["run_id"]
     assert first["content_hash"] == second["content_hash"]
+
+
+def _skills_enabled_config(tmp_path: Path) -> str:
+    """Shipped config with the Workstream B skills toggled on."""
+
+    config = load_config("configs/agents.yaml")
+    agents = config["agents"]
+    agents["quant_scout"]["skills"]["reproducibility_triage"]["enabled"] = True
+    for name in ("pdf_acquisition", "method_spec_extraction", "target_table_extraction"):
+        agents["quant_reader"]["skills"][name]["enabled"] = True
+    path = tmp_path / "agents-skills.yaml"
+    path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    return str(path)
+
+
+def _skills_args(tmp_path: Path, paper_json: str | None) -> Namespace:
+    return Namespace(
+        source="local",
+        query="momentum",
+        max_papers=1,
+        paper_json=paper_json,
+        agents_config=_skills_enabled_config(tmp_path),
+        benchmark_config="configs/benchmarks.yaml",
+        report_dir=str(tmp_path / "reports"),
+        write_reports=False,
+        runs_dir=str(tmp_path / "runs"),
+    )
+
+
+def test_golden_paper_flows_through_enabled_skills(tmp_path: Path) -> None:
+    args = _skills_args(tmp_path, str(FIXTURES / "golden_paper.json"))
+
+    reports = run_workflow(args)
+
+    assert len(reports) == 1
+    analysis = reports[0].analysis
+    assert analysis.method_spec is not None
+    assert analysis.method_spec.frequency == "monthly"
+    assert analysis.reproduction_target is not None
+    assert analysis.reproduction_target.claims[0].value == pytest.approx(0.0095)
+
+    manifest = _load_manifests(tmp_path / "runs")[0]
+    recorded = {entry["skill"] for entry in manifest["skill_results"]}
+    assert recorded == {
+        "reproducibility_triage",
+        "pdf_acquisition",
+        "method_spec_extraction",
+        "target_table_extraction",
+    }
+    triage = next(
+        entry for entry in manifest["skill_results"]
+        if entry["skill"] == "reproducibility_triage"
+    )
+    assert triage["payload"]["passes_gate"] is True
+
+
+def test_low_feasibility_paper_is_gated_but_audited(tmp_path: Path) -> None:
+    paper_json = tmp_path / "proprietary.json"
+    paper_json.write_text(
+        json.dumps(
+            [
+                {
+                    "title": "Alpha from Internal Order Flow",
+                    "abstract": "We use proprietary internal data from an order-level feed.",
+                    "keywords": ["microstructure"],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    args = _skills_args(tmp_path, str(paper_json))
+
+    reports = run_workflow(args)
+
+    assert reports == []
+    manifest = _load_manifests(tmp_path / "runs")[0]
+    triage = manifest["skill_results"][0]
+    assert triage["payload"]["passes_gate"] is False
+    # Gated runs keep their manifest but never produce a report artifact.
+    assert "report.md" not in manifest["artifacts"]
+
+
+def test_enabled_skills_require_runs_dir(tmp_path: Path) -> None:
+    args = _skills_args(tmp_path, str(FIXTURES / "golden_paper.json"))
+    args.runs_dir = None
+
+    with pytest.raises(ValueError, match="runs-dir"):
+        run_workflow(args)

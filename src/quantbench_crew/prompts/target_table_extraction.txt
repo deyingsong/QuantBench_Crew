@@ -1,0 +1,18 @@
+Identify the headline quantitative results this paper claims, suitable as
+reproduction targets. Prefer the paper's main result table. Report only
+claims with explicit numeric values; do not infer or average.
+
+Paper title: {title}
+Abstract: {abstract}
+
+Return ONLY a JSON object with exactly these keys:
+- "table_reference": string naming the source table (e.g. "Table 1, Panel A"),
+  or "" if the claims come from the text
+- "claims": array of objects, each with:
+  - "metric": canonical metric name (e.g. "sharpe", "monthly_return", "alpha")
+  - "value": number, in decimal units (0.95% per month -> 0.0095)
+  - "unit": string (e.g. "monthly", "annualized")
+  - "context": string describing the portfolio the number applies to
+  - "tolerance": number, relative tolerance band for reproduction (default 0.2)
+  - "source": string locating the number in the paper
+- "notes": array of strings with caveats (e.g. gross vs net of costs)

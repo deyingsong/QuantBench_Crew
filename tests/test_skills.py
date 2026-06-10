@@ -134,9 +134,9 @@ def test_fallback_cycle_raises() -> None:
         registry.resolve("quant_scout", _config("quant_scout", {"a": {"enabled": True}}))
 
 
-def test_default_registry_has_no_skills_registered_yet() -> None:
-    # Phase 1 plumbing ships with the registry empty; the shipped config has
-    # every placeholder disabled, so resolution yields nothing for any agent.
+def test_shipped_config_resolves_no_skills() -> None:
+    # Workstream B registers real skills, but the shipped config keeps every
+    # entry disabled: default pipeline behavior stays the dry workflow.
     from quantbench_crew.config import load_config
 
     config = load_config("configs/agents.yaml")
@@ -148,6 +148,15 @@ def test_default_registry_has_no_skills_registered_yet() -> None:
         "quant_reviewer",
     ):
         assert default_registry.resolve(agent, config) == {}
+
+
+def test_workstream_b_skills_are_registered() -> None:
+    assert "reproducibility_triage" in default_registry.names("quant_scout")
+    assert default_registry.names("quant_reader") == (
+        "method_spec_extraction",
+        "pdf_acquisition",
+        "target_table_extraction",
+    )
 
 
 def test_agents_accept_and_store_skills() -> None:

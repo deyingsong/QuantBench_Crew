@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 
 from quantbench_crew.models import Paper, ScoredPaper
-from quantbench_crew.skills.base import Skill
+from quantbench_crew.skills.base import RunContext, Skill, SkillResult
 
 
 class QuantScoutAgent:
@@ -37,6 +37,18 @@ class QuantScoutAgent:
         scored = [self._score(paper) for paper in papers]
         scored.sort(key=lambda item: item.score, reverse=True)
         return scored[:max_papers]
+
+    def triage(self, scored: ScoredPaper, ctx: "RunContext | None") -> "SkillResult | None":
+        """Run the reproducibility triage skill for one ranked paper.
+
+        Returns None when the skill is not enabled or no run context exists;
+        the workflow then proceeds ungated, exactly as before skills existed.
+        """
+
+        skill = self.skills.get("reproducibility_triage")
+        if skill is None or ctx is None:
+            return None
+        return skill.run(ctx, paper=scored.paper)
 
     def _score(self, paper: Paper) -> ScoredPaper:
         text = f"{paper.title} {paper.abstract} {' '.join(paper.keywords)}".lower()

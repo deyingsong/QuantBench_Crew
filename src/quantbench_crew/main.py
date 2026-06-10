@@ -15,8 +15,10 @@ from quantbench_crew.agents import (
 )
 from quantbench_crew.artifacts import start_run
 from quantbench_crew.config import load_config
+from quantbench_crew.llm import build_llm_client
 from quantbench_crew.models import ReviewReport
 from quantbench_crew.skills import resolve_skills
+from quantbench_crew.skills.base import RunContext
 from quantbench_crew.tools.arxiv_tool import load_local_papers, search_arxiv
 
 
@@ -84,29 +86,62 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         else load_local_papers(args.paper_json)
     )
 
-    scout = QuantScoutAgent(
-        keywords=scout_keywords, skills=resolve_skills("quant_scout", agents_config)
-    )
-    reader = QuantReaderAgent(skills=resolve_skills("quant_reader", agents_config))
-    coder = QuantCoderAgent(skills=resolve_skills("quant_coder", agents_config))
-    bench = QuantBenchAgent(skills=resolve_skills("quant_bench", agents_config))
-    reviewer = QuantReviewerAgent(skills=resolve_skills("quant_reviewer", agents_config))
+    agent_skills = {
+        name: resolve_skills(name, agents_config)
+        for name in (
+            "quant_scout",
+            "quant_reader",
+            "quant_coder",
+            "quant_bench",
+            "quant_reviewer",
+        )
+    }
+    runs_dir = getattr(args, "runs_dir", None)
+    if any(agent_skills.values()) and not runs_dir:
+        raise ValueError(
+            "Enabled skills record results in run manifests; pass --runs-dir "
+            "(or disable the skills in the agents config)."
+        )
+
+    scout = QuantScoutAgent(keywords=scout_keywords, skills=agent_skills["quant_scout"])
+    reader = QuantReaderAgent(skills=agent_skills["quant_reader"])
+    coder = QuantCoderAgent(skills=agent_skills["quant_coder"])
+    bench = QuantBenchAgent(skills=agent_skills["quant_bench"])
+    reviewer = QuantReviewerAgent(skills=agent_skills["quant_reviewer"])
 
     # Volatile inputs (timestamps, run ids) stay out of this hash so reruns
     # on identical inputs produce identical manifest content hashes.
     run_config = {"agents": agents_config, "benchmarks": benchmark_config}
-    runs_dir = getattr(args, "runs_dir", None)
 
     reports: list[ReviewReport] = []
     for scored in scout.rank(papers, max_papers=args.max_papers):
-        analysis = reader.analyze(scored.paper)
+        ctx = None
+        manifest = store = None
+        if runs_dir:
+            manifest, store = start_run(Path(runs_dir), scored.paper.slug, run_config)
+            ctx = RunContext(
+                run_id=manifest.run_id,
+                run_dir=store.run_dir,
+                config=agents_config,
+                manifest=manifest,
+                llm=build_llm_client(agents_config, manifest),
+            )
+
+        triage = scout.triage(scored, ctx)
+        if triage is not None and not triage.payload.get("passes_gate", True):
+            # Gated papers still write their manifest: the triage decision is
+            # part of the trial record, not something to discard silently.
+            if manifest is not None and store is not None:
+                manifest.save(store.run_dir)
+            continue
+
+        analysis = reader.analyze(scored.paper, ctx=ctx)
         implementation_plan = coder.plan(analysis)
         benchmark_result = bench.evaluate(implementation_plan)
         report = reviewer.review(analysis, implementation_plan, benchmark_result)
         reports.append(report)
 
-        if runs_dir:
-            manifest, store = start_run(Path(runs_dir), report.paper.slug, run_config)
+        if manifest is not None and store is not None:
             store.write_text("report.md", report.to_markdown())
             manifest.save(store.run_dir)
 

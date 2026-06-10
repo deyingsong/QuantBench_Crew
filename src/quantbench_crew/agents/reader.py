@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Protocol
 
 from quantbench_crew.models import Paper, PaperAnalysis
-from quantbench_crew.skills.base import Skill
+from quantbench_crew.skills.base import RunContext, Skill
+from quantbench_crew.skills.reader.method_spec import method_spec_from_payload
+from quantbench_crew.skills.reader.target_table import reproduction_target_from_payload
+from quantbench_crew.skills.validation import extract_json_object
 from quantbench_crew.tools.paper_parser import keyword_extract, sentence_summary
 
 
@@ -64,7 +67,10 @@ class QuantReaderAgent:
         self.use_paperqa = use_paperqa
         self.skills = dict(skills or {})
 
-    def analyze(self, paper: Paper) -> PaperAnalysis:
+    def analyze(self, paper: Paper, ctx: RunContext | None = None) -> PaperAnalysis:
+        if ctx is not None:
+            paper = self._acquire_documents(paper, ctx)
+
         if (
             self.paperqa_client is None
             and self.use_paperqa
@@ -75,10 +81,45 @@ class QuantReaderAgent:
         paperqa_answer = (
             self.paperqa_client.analyze(paper) if self.paperqa_client is not None else None
         )
-        if paperqa_answer:
-            return _analysis_from_paperqa_answer(paper, paperqa_answer)
+        analysis = (
+            _analysis_from_paperqa_answer(paper, paperqa_answer)
+            if paperqa_answer
+            else _metadata_analysis(paper)
+        )
 
-        return _metadata_analysis(paper)
+        if ctx is not None:
+            analysis = self._extract_structured(analysis, ctx)
+        return analysis
+
+    def _acquire_documents(self, paper: Paper, ctx: RunContext) -> Paper:
+        """Run the pdf_acquisition skill and enrich the paper's raw paths."""
+
+        skill = self.skills.get("pdf_acquisition")
+        if skill is None:
+            return paper
+        result = skill.run(ctx, paper=paper)
+        pdf_path = result.payload.get("pdf_path")
+        if result.status == "ok" and pdf_path:
+            return replace(paper, raw={**paper.raw, "pdf_path": pdf_path})
+        return paper
+
+    def _extract_structured(self, analysis: PaperAnalysis, ctx: RunContext) -> PaperAnalysis:
+        """Attach MethodSpec and ReproductionTarget from extraction skills."""
+
+        spec_skill = self.skills.get("method_spec_extraction")
+        if spec_skill is not None:
+            result = spec_skill.run(ctx, analysis=analysis)
+            spec = method_spec_from_payload(analysis.paper, result.payload)
+            if spec is not None:
+                analysis = replace(analysis, method_spec=spec)
+
+        target_skill = self.skills.get("target_table_extraction")
+        if target_skill is not None:
+            result = target_skill.run(ctx, analysis=analysis)
+            target = reproduction_target_from_payload(analysis.paper, result.payload)
+            if target is not None:
+                analysis = replace(analysis, reproduction_target=target)
+        return analysis
 
 
 def document_paths_for_paper(paper: Paper) -> tuple[Path, ...]:
@@ -122,7 +163,7 @@ def _paperqa_question(paper: Paper) -> str:
 
 
 def _analysis_from_paperqa_answer(paper: Paper, answer: str) -> PaperAnalysis:
-    payload = _extract_json_object(answer)
+    payload = extract_json_object(answer)
     if not payload:
         fallback = _metadata_analysis(paper)
         return PaperAnalysis(
@@ -191,29 +232,6 @@ def _method_hint(text: str) -> str:
     if "forecast" in lowered or "predict" in lowered:
         return "Forecasting method requiring out-of-sample evaluation."
     return "Method details require full-text extraction before implementation."
-
-
-def _extract_json_object(text: str) -> dict[str, Any]:
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = stripped.strip("`")
-        if stripped.startswith("json"):
-            stripped = stripped[4:].strip()
-
-    candidates = [stripped]
-    start = stripped.find("{")
-    end = stripped.rfind("}")
-    if start != -1 and end != -1 and start < end:
-        candidates.append(stripped[start : end + 1])
-
-    for candidate in candidates:
-        try:
-            value = json.loads(candidate)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(value, dict):
-            return value
-    return {}
 
 
 def _answer_text(session: Any) -> str:

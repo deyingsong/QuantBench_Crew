@@ -19,7 +19,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from quantbench_crew.skills.base import RunContext, Skill, SkillResult
+from quantbench_crew.skills.base import RunContext, Skill, SkillResult, skill_settings
 
 __all__ = [
     "AGENT_NAMES",
@@ -31,6 +31,7 @@ __all__ = [
     "default_registry",
     "register_skill",
     "resolve_skills",
+    "skill_settings",
 ]
 
 AGENT_NAMES = (
@@ -155,3 +156,11 @@ def resolve_skills(agent: str, config: Mapping[str, Any]) -> dict[str, Skill]:
     """Resolve one agent's enabled skills from the default registry."""
 
     return default_registry.resolve(agent, config)
+
+
+# Import skill implementations so their @register_skill decorators run when
+# the package is imported. These must stay below the registry definitions.
+from quantbench_crew.skills.reader import method_spec as _reader_method_spec  # noqa: E402,F401
+from quantbench_crew.skills.reader import pdf_acquisition as _reader_pdf_acquisition  # noqa: E402,F401
+from quantbench_crew.skills.reader import target_table as _reader_target_table  # noqa: E402,F401
+from quantbench_crew.skills.scout import triage as _scout_triage  # noqa: E402,F401
