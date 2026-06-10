@@ -22,3 +22,7 @@ Paper source -> Scout -> Reader -> Coder -> Bench -> Reviewer -> Markdown report
 - Reproducible configs and report artifacts.
 - Human-readable output at each stage.
 - Clear extension points for future paper ingestion and benchmarks.
+
+## Further Reading
+
+- [skills-design.md](skills-design.md): proposed per-agent skill model, new domain dataclasses, and the Phase 1 ticket breakdown.
