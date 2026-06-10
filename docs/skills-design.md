@@ -58,7 +58,9 @@ Three shared pieces support all skills:
 
 - **LLM client seam** (`llm.py`): one provider-agnostic `complete()` API with
   a recorded-stub mode that replays fixtures in tests. Every call is logged to
-  the run manifest with model, tokens, and cost.
+  the run manifest with model, tokens, and cost. Code-synthesis calls may
+  route through an agent-backed adapter behind the same seam (see the
+  QuantCoderAgent roadmap).
 - **Artifact store** (`artifacts.py`): each paper run writes
   `runs/<run_id>/manifest.json` capturing skill results, input/output hashes,
   and seeds. The manifest is the reproducibility claim.
@@ -266,6 +268,27 @@ class RunManifest:
 
 Priorities: P0 = Phase 1 critical path, P1 = Phase 2 deepening, P2 = later.
 
+Terminology: "skill" in this note always means the runtime plug-in defined
+above. The development environment (Claude Code with the ecc plugin) has its
+own, unrelated "skills"; where one is referenced below it is development-time
+leverage — content to seed rubrics and checklists, review gates while
+building tickets — never a runtime dependency of the pipeline. Principle 2
+(deterministic offline fallback) stays intact.
+
+Cross-cutting:
+
+- **The LLM seam serves two call shapes.** Structured extraction (reader,
+  scout triage, reviewer rubric) is single-shot `complete()` with JSON-schema
+  validation. Code synthesis (coder) additionally gets an agent-backed
+  adapter behind the same seam (see QuantCoderAgent).
+- **Per-paper cost caps move from Phase 3 to P1.** The manifest already logs
+  cost per call (QB-02); cap enforcement is a few lines, and the agentic
+  codegen loop is exactly where silent cost creep would start. Deferring
+  enforcement to Phase 3 inverts the risk timing.
+- **Dev process for L-sized tickets** (QB-07, QB-11, QB-13): a planning pass
+  (`/ecc:plan`) before implementation and a review pass
+  (`/ecc:python-review`) on completion.
+
 ### QuantScoutAgent
 
 - P0 Real arXiv search behind the existing `search_arxiv` seam (q-fin
@@ -273,42 +296,74 @@ Priorities: P0 = Phase 1 critical path, P1 = Phase 2 deepening, P2 = later.
   code repositories).
 - P0 Reproducibility triage: classify data requirements as public, vendor, or
   proprietary (CRSP/TAQ imply WRDS access); detect released code; output a
-  feasibility score that gates downstream spend.
+  feasibility score that gates downstream spend. Seed the triage rubric from
+  the ecc scholar-evaluation criteria (venue and citation quality, claim
+  falsifiability, data accessibility), then specialize it to the data-tier
+  classification, rather than drafting it from scratch.
 - P1 Embedding-based relevance against a configurable research charter
   document; dedup against already-processed papers.
+- Dev-time: curate the golden-paper set and the offline search fixtures with
+  `/ecc:deep-research` before QB-05/QB-06 start, so live API work begins
+  against known-good expectations.
 
 ### QuantReaderAgent
 
 - P0 PDF acquisition: arXiv URL to cached local file so PaperQA2 engages
   without hand-fed paths.
+- P0 Hand-labeled extraction fixtures: a manually curated MethodSpec and
+  ReproductionTarget for the golden paper, written before the extractors
+  exist. They are the ground truth QB-07/QB-08 validate against; without
+  them, extraction quality is self-graded.
 - P0 Target-table extraction: identify the headline results table and parse
   it into a `ReproductionTarget`. Without a quantitative target, reproduction
-  is unfalsifiable.
+  is unfalsifiable. PaperQA2 is strong on narrative fields but weak at
+  faithful number-grid extraction; evaluate a dedicated document/table
+  parser as the fallback before hand-rolling PDF table parsing.
 - P0 MethodSpec extraction: structured, JSON-schema-validated extraction of
   universe, signal, construction, frequency, and sample period.
 - P1 Falsifiable-claim enumeration and a red-flag scan (no transaction costs,
-  in-sample tuning, survivorship-prone samples, microcap-driven results).
+  in-sample tuning, survivorship-prone samples, microcap-driven results);
+  seed the checklist from the Lopez de Prado material already in the
+  practitioner corpus rather than drafting it fresh.
 
 ### QuantCoderAgent
 
 - P0 Strategy contract plus one hand-written reference strategy (momentum)
   that passes through the bench harness. De-risks the contract before any
   code generation.
+- P0 Deterministic test templates parameterized by MethodSpec fields: shape
+  tests, determinism tests, and no-lookahead tests (shift inputs after t;
+  outputs before t must not change). These sit at P0 because `execute_fn`
+  scores on tests passed — without them there is nothing to score — and they
+  are the anti-Goodhart mechanism the Risks section relies on. No LLM
+  involved.
 - P0 Code emission and sandboxed execution behind the existing ERA seams:
-  `generate_fn` becomes LLM-backed code generation, `execute_fn` runs the
-  candidate in a sandbox and scores on tests passed. This is the point where
-  the UCB search starts doing real work.
-- P1 Test synthesis from the MethodSpec: shape tests, determinism tests, and
-  no-lookahead tests (shift inputs after t; outputs before t must not
-  change). AST-level static checks (forbidden imports, no eval) before
-  execution.
+  `generate_fn` becomes code generation behind a two-adapter seam — (a)
+  single-shot `complete()` emission as the budget tier, (b) agent-backed
+  generation via headless Claude Code / Agent SDK with an inner
+  generate-test-fix loop as the default. Single-shot emission of a correct
+  no-lookahead module is the weakest link on the P0 path; with the agentic
+  adapter the UCB search explores spec interpretations and approach hints
+  rather than token-level retries. Recorded-stub mode captures the final
+  emitted module either way. `execute_fn` runs the candidate in the sandbox
+  and scores on tests passed. This is the point where the UCB search starts
+  doing real work. The loop is structurally a generator/evaluator harness;
+  mine the ecc GAN harness (bounded iterations, explicit scoring rubric) for
+  the scoring design.
+- P1 Spec-specific test synthesis: LLM-derived tests beyond the deterministic
+  templates, e.g. edge cases implied by the signal formula or sample-period
+  boundaries. (AST-level static checks live in the sandbox executor, QB-10,
+  their single home.)
 
 ### QuantBenchAgent
 
 - P0 Dataset registry: Kenneth French factor library and free daily prices
   first; synthetic generators with planted effects and pure noise for harness
   validation; vendor data (WRDS) as a pluggable tier later. Point-in-time
-  discipline from day one.
+  discipline from day one. Harness validation on the synthetic worlds is
+  statistical, not anecdotal: the noise world must come out "does not
+  reproduce / inconclusive" across multiple seeds (at least 9 of 10),
+  tracked as a false-positive rate.
 - P0 Walk-forward protocol with purged/embargoed splits; baseline library
   (equal weight, buy-and-hold, momentum, random signals at matched turnover).
   Random nulls provide a significance floor.
@@ -322,12 +377,19 @@ Priorities: P0 = Phase 1 critical path, P1 = Phase 2 deepening, P2 = later.
 
 - P0 Rubric-based verdict where every line cites an `EvidenceLink`. Until
   real benchmarks flow, the verdict is hard-coded to "scaffold-only"; the
-  current placeholder "promising" is worse than nothing.
+  current placeholder "promising" is worse than nothing. Prompt design
+  borrows the evidence-confidence discipline of code review: report only
+  findings that cite an artifact — the same contract `EvidenceLink` enforces
+  in the dataclass.
 - P1 Robustness interpretation (subsample stability, parameter sensitivity)
-  and a quant-pitfalls red-team checklist auto-filled from upstream evidence.
+  and a quant-pitfalls red-team checklist auto-filled from upstream evidence;
+  seed the checklist from ecc risk-review rubrics and the practitioner
+  corpus rather than writing it fresh.
 - P2 Knowledge-grounded commentary: RAG over the practitioner corpus in
-  `data/` (Dalio, Asness, Lopez de Prado, Chan, Fink source material) to
-  contextualize findings against established practitioner views.
+  `Source_data/transcript/` (Dalio, Asness, Lopez de Prado, Chan, Fink source
+  material) to contextualize findings against established practitioner
+  views. Use an iterative-retrieval pattern rather than single-shot
+  embedding lookup.
 
 ## Phase 1 Ticket Breakdown
 
@@ -341,7 +403,8 @@ Acceptance for the phase as a whole:
 - Rerunning the pipeline on the golden paper yields identical manifest hashes
   (excluding timestamps).
 - The pure-noise synthetic world produces an "inconclusive / does not
-  reproduce" outcome.
+  reproduce" outcome across multiple seeds (at least 9 of 10), tracked as a
+  false-positive rate.
 
 Sizes: S (about a day), M (2-3 days), L (about a week).
 
@@ -386,21 +449,28 @@ Sizes: S (about a day), M (2-3 days), L (about a week).
 ### Workstream C: coder
 
 - **QB-09 (M) Strategy contract, PanelData, reference momentum strategy.**
-  Hand-written reference implementation with tests. Done when it passes the
-  no-lookahead test and runs through the bench harness end to end. Depends
-  on: QB-04.
+  Hand-written reference implementation with tests, plus the deterministic
+  test templates (shape, determinism, no-lookahead) parameterized by
+  MethodSpec fields — the templates QB-11's `execute_fn` scores against.
+  Done when the reference strategy passes the no-lookahead template and runs
+  through the bench harness end to end. Depends on: QB-04.
 - **QB-10 (M) Sandbox executor.**
   Extend `tools/code_runner.py`: no network, CPU/time/memory limits, fixed
-  seeds, AST-based import allowlist. Done when fixture scripts that loop,
-  fork, or import forbidden modules are blocked or killed with results
-  captured. Depends on: nothing.
+  seeds, AST-based static checks (import allowlist, no eval/exec) — the
+  single home for static gating; the coder runs no separate AST pass. Done
+  when fixture scripts that loop, fork, or import forbidden modules are
+  blocked or killed with results captured, and the threat model has been
+  reviewed against LLM-generated-code risks (`/ecc:security-review`).
+  Depends on: nothing.
 - **QB-11 (L) Code generation skill behind ERA.**
-  LLM-backed `generate_fn` emits a Strategy module plus synthesized tests;
-  `execute_fn` runs candidates in the sandbox; score is tests passed plus a
-  structure score. Deterministic fallback generates from the reference
-  strategy template. Done when, for the golden paper, at least one candidate
-  passes all synthesized tests within the iteration budget. Depends on:
-  QB-02, QB-07, QB-09, QB-10.
+  `generate_fn` emits a Strategy module behind the two-adapter seam
+  (single-shot `complete()` or agent-backed via headless Claude Code / Agent
+  SDK); `execute_fn` runs candidates in the sandbox; score is deterministic
+  template tests passed plus a structure score. Deterministic fallback
+  generates from the reference strategy template. Done when, for the golden
+  paper, at least one candidate passes all template tests within the
+  iteration budget and the per-paper cost cap. Depends on: QB-02, QB-07,
+  QB-09, QB-10.
 
 ### Workstream D: bench
 
@@ -439,8 +509,9 @@ workstreams B-D in parallel, closing with QB-11, QB-14, QB-15, QB-16.
 - **Phase 2:** the P1 items above, plus a golden-paper evaluation set (3-5
   papers with known-good reproductions, e.g. cross-sectional momentum, FF
   factors, Gu-Kelly-Xiu) run in CI as regression tests for the system itself.
-- **Phase 3:** parallel paper runs, LLM call caching and per-paper cost caps,
-  human-in-the-loop checkpoints before any "promising" verdict ships.
+- **Phase 3:** parallel paper runs, LLM call caching, human-in-the-loop
+  checkpoints before any "promising" verdict ships. (Per-paper cost caps
+  moved to P1; see the roadmap cross-cutting notes.)
 
 ## Risks
 
@@ -453,7 +524,8 @@ workstreams B-D in parallel, closing with QB-11, QB-14, QB-15, QB-16.
 - **Leakage in generated code.** Mitigation: mandatory no-lookahead tests and
   point-in-time data contracts (QB-11, QB-12).
 - **Silent LLM cost creep.** Mitigation: manifest-level spend tracking
-  (QB-02) and per-paper budget caps (Phase 3).
+  (QB-02) and per-paper budget caps (P1, enforced before the agentic codegen
+  adapter becomes the default).
 - **Optional-dependency sprawl.** Mitigation: every skill implements
   `available()` and a deterministic fallback; the dry workflow remains the
   permanent baseline test target.
