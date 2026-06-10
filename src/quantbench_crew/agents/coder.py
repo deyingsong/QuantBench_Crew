@@ -3,18 +3,26 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from typing import Any
 
 from quantbench_crew.agents import era
 from quantbench_crew.models import ImplementationPlan, PaperAnalysis
+from quantbench_crew.skills.base import Skill
 
 
 class QuantCoderAgent:
     """Use ERA-style search to create a conservative implementation plan."""
 
-    def __init__(self, iterations: int = 3, c_puct: float = 1.0) -> None:
+    def __init__(
+        self,
+        iterations: int = 3,
+        c_puct: float = 1.0,
+        skills: Mapping[str, Skill] | None = None,
+    ) -> None:
         self.iterations = iterations
         self.c_puct = c_puct
+        self.skills = dict(skills or {})
 
     def plan(self, analysis: PaperAnalysis) -> ImplementationPlan:
         problem = era.Problem(description=_problem_description(analysis))

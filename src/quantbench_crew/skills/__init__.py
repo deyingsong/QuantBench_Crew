@@ -1,0 +1,157 @@
+"""Skill registry and config wiring.
+
+Skills are declared per agent in ``configs/agents.yaml`` under an optional
+``skills:`` mapping and toggled with ``enabled``. Agents resolve their skills
+through the registry; with every skill disabled the registry resolves to an
+empty mapping and pipeline behavior is unchanged.
+
+Resolution walks an explicit fallback chain: when a skill's implementation is
+unavailable (missing credentials or optional dependencies), the registry
+falls back to the registered fallback skill. An enabled skill whose entire
+chain is unavailable raises, because a silent skip would hide a
+misconfiguration — the design contract is that every chain terminates in a
+deterministic offline implementation.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from typing import Any
+
+from quantbench_crew.skills.base import RunContext, Skill, SkillResult
+
+__all__ = [
+    "AGENT_NAMES",
+    "RunContext",
+    "Skill",
+    "SkillRegistry",
+    "SkillResult",
+    "SkillSpec",
+    "default_registry",
+    "register_skill",
+    "resolve_skills",
+]
+
+AGENT_NAMES = (
+    "quant_scout",
+    "quant_reader",
+    "quant_coder",
+    "quant_bench",
+    "quant_reviewer",
+)
+
+
+@dataclass(frozen=True)
+class SkillSpec:
+    """Registration record for one skill implementation."""
+
+    agent: str
+    name: str
+    factory: Callable[[], Skill]
+    fallback: str | None = None   # name of the same-agent fallback skill
+
+
+class SkillRegistry:
+    """Maps (agent, skill name) to skill factories with fallback chains."""
+
+    def __init__(self) -> None:
+        self._specs: dict[tuple[str, str], SkillSpec] = {}
+
+    def register(
+        self,
+        agent: str,
+        name: str,
+        factory: Callable[[], Skill] | None = None,
+        *,
+        fallback: str | None = None,
+    ) -> Callable[..., Any]:
+        """Register a skill factory; usable directly or as a decorator."""
+
+        if factory is None:
+            def decorator(fn: Callable[[], Skill]) -> Callable[[], Skill]:
+                self.register(agent, name, fn, fallback=fallback)
+                return fn
+
+            return decorator
+
+        key = (agent, name)
+        if key in self._specs:
+            raise ValueError(f"Skill already registered: {agent}/{name}")
+        self._specs[key] = SkillSpec(agent=agent, name=name, factory=factory, fallback=fallback)
+        return factory
+
+    def names(self, agent: str) -> tuple[str, ...]:
+        return tuple(sorted(name for (owner, name) in self._specs if owner == agent))
+
+    def spec(self, agent: str, name: str) -> SkillSpec:
+        try:
+            return self._specs[(agent, name)]
+        except KeyError:
+            registered = ", ".join(self.names(agent)) or "none"
+            raise KeyError(
+                f"Unknown skill {agent}/{name}; registered for {agent}: {registered}"
+            ) from None
+
+    def create(self, agent: str, name: str) -> Skill:
+        """Instantiate the named skill without availability resolution."""
+
+        return self.spec(agent, name).factory()
+
+    def resolve(self, agent: str, config: Mapping[str, Any]) -> dict[str, Skill]:
+        """Return enabled, available skills for one agent from the config.
+
+        ``config`` is the full agents.yaml mapping. Disabled entries are
+        inert even when unregistered, so configs may declare future skills
+        ahead of their implementation. Enabled entries must be registered
+        and must resolve to an available implementation via the fallback
+        chain.
+        """
+
+        agent_config = (config.get("agents") or {}).get(agent) or {}
+        skills_config = agent_config.get("skills") or {}
+
+        resolved: dict[str, Skill] = {}
+        for name, entry in skills_config.items():
+            enabled = bool((entry or {}).get("enabled", False))
+            if not enabled:
+                continue
+            resolved[name] = self._resolve_chain(agent, name)
+        return resolved
+
+    def _resolve_chain(self, agent: str, name: str) -> Skill:
+        chain: list[str] = []
+        current: str | None = name
+        while current is not None:
+            if current in chain:
+                raise LookupError(
+                    f"Skill fallback cycle for {agent}/{name}: {' -> '.join([*chain, current])}"
+                )
+            chain.append(current)
+            spec = self.spec(agent, current)
+            skill = spec.factory()
+            if skill.available():
+                return skill
+            current = spec.fallback
+        raise LookupError(
+            f"No available implementation for {agent}/{name} "
+            f"(tried: {' -> '.join(chain)}); every skill chain must end in a "
+            "deterministic offline fallback"
+        )
+
+
+default_registry = SkillRegistry()
+
+
+def register_skill(
+    agent: str, name: str, *, fallback: str | None = None
+) -> Callable[..., Any]:
+    """Decorator registering a skill factory on the default registry."""
+
+    return default_registry.register(agent, name, fallback=fallback)
+
+
+def resolve_skills(agent: str, config: Mapping[str, Any]) -> dict[str, Skill]:
+    """Resolve one agent's enabled skills from the default registry."""
+
+    return default_registry.resolve(agent, config)

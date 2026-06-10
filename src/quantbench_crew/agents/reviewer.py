@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from quantbench_crew.models import BenchmarkResult, ImplementationPlan, PaperAnalysis, ReviewReport
+from quantbench_crew.skills.base import Skill
 
 
 class QuantReviewerAgent:
     """Synthesize paper analysis, implementation notes, and benchmark metrics."""
+
+    def __init__(self, skills: Mapping[str, Skill] | None = None) -> None:
+        self.skills = dict(skills or {})
 
     def review(
         self,

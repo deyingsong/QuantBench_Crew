@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 
 from quantbench_crew.models import Paper, ScoredPaper
+from quantbench_crew.skills.base import Skill
 
 
 class QuantScoutAgent:
     """Rank candidate papers by keyword relevance."""
 
-    def __init__(self, keywords: Iterable[str] | None = None) -> None:
+    def __init__(
+        self,
+        keywords: Iterable[str] | None = None,
+        skills: Mapping[str, Skill] | None = None,
+    ) -> None:
+        self.skills = dict(skills or {})
         self.keywords = tuple(
             keyword.lower()
             for keyword in (

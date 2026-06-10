@@ -1,3 +1,20 @@
+# Agent and skill configuration.
+#
+# Skills are declared per agent under `skills:` and toggled with `enabled`.
+# All skills ship disabled: the deterministic dry workflow is the permanent
+# baseline, and enabling a skill must never be required for the pipeline to
+# run. Disabled entries may name skills that are not implemented yet.
+#
+# The top-level `llm:` section configures the shared LLM client seam.
+# `provider: none` keeps runs free of network and API-key dependencies;
+# `stub` replays recorded fixtures; `anthropic` calls the live API.
+
+llm:
+  provider: none
+  model: claude-opus-4-8
+  max_tokens: 4096
+  fixtures: tests/fixtures/llm_fixtures.json
+
 agents:
   quant_scout:
     role: Paper discovery and relevance ranking
@@ -8,6 +25,11 @@ agents:
       - forecasting
       - risk
       - machine learning
+    skills:
+      arxiv_search:
+        enabled: false
+      reproducibility_triage:
+        enabled: false
   quant_reader:
     role: PaperQA2-backed paper summarization and method extraction
     rag_backbone: PaperQA2
@@ -19,6 +41,13 @@ agents:
       - datasets
       - metrics
       - limitations
+    skills:
+      pdf_acquisition:
+        enabled: false
+      target_table_extraction:
+        enabled: false
+      method_spec_extraction:
+        enabled: false
   quant_coder:
     role: ERA-backed reproducible implementation planning
     search_algorithm: Flat UCB Tree Search
@@ -28,6 +57,9 @@ agents:
       - assumptions
       - tests
       - open_questions
+    skills:
+      code_generation:
+        enabled: false
   quant_bench:
     role: Benchmark evaluation and robustness checks
     default_metrics:
@@ -35,9 +67,17 @@ agents:
       - volatility
       - sharpe
       - max_drawdown
+    skills:
+      dataset_registry:
+        enabled: false
+      walk_forward:
+        enabled: false
   quant_reviewer:
     role: Research synthesis and final review
     verdicts:
       - promising
       - inconclusive
       - weak
+    skills:
+      rubric_verdict:
+        enabled: false

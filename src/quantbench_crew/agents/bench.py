@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from quantbench_crew.models import BenchmarkResult, ImplementationPlan
+from quantbench_crew.skills.base import Skill
 from quantbench_crew.tools.evaluator import evaluate_returns
 
 
 class QuantBenchAgent:
     """Evaluate a method placeholder on sample benchmark data."""
+
+    def __init__(self, skills: Mapping[str, Skill] | None = None) -> None:
+        self.skills = dict(skills or {})
 
     def evaluate(
         self,

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Protocol
 
 from quantbench_crew.models import Paper, PaperAnalysis
+from quantbench_crew.skills.base import Skill
 from quantbench_crew.tools.paper_parser import keyword_extract, sentence_summary
 
 
@@ -56,9 +58,11 @@ class QuantReaderAgent:
         self,
         paperqa_client: PaperQAReaderClient | None = None,
         use_paperqa: bool = True,
+        skills: Mapping[str, Skill] | None = None,
     ) -> None:
         self.paperqa_client = paperqa_client
         self.use_paperqa = use_paperqa
+        self.skills = dict(skills or {})
 
     def analyze(self, paper: Paper) -> PaperAnalysis:
         if (

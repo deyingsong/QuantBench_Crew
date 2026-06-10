@@ -1,4 +1,5 @@
 google_paper/
+runs/
 .DS_Store
 __pycache__/
 *.py[cod]

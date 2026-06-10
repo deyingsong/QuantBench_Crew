@@ -13,8 +13,10 @@ from quantbench_crew.agents import (
     QuantReviewerAgent,
     QuantScoutAgent,
 )
+from quantbench_crew.artifacts import start_run
 from quantbench_crew.config import load_config
 from quantbench_crew.models import ReviewReport
+from quantbench_crew.skills import resolve_skills
 from quantbench_crew.tools.arxiv_tool import load_local_papers, search_arxiv
 
 
@@ -49,6 +51,11 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--benchmark-config", default="configs/benchmarks.yaml")
     run.add_argument("--report-dir", default="reports")
     run.add_argument("--write-reports", action="store_true")
+    run.add_argument(
+        "--runs-dir",
+        default="runs",
+        help="Directory for run manifests; each paper run writes <runs-dir>/<run_id>/manifest.json.",
+    )
     return parser
 
 
@@ -64,7 +71,7 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
     """Run the initial deterministic QuantBench workflow."""
 
     agents_config = load_config(args.agents_config)
-    load_config(args.benchmark_config)
+    benchmark_config = load_config(args.benchmark_config)
     scout_keywords = (
         agents_config.get("agents", {})
         .get("quant_scout", {})
@@ -77,18 +84,31 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         else load_local_papers(args.paper_json)
     )
 
-    scout = QuantScoutAgent(keywords=scout_keywords)
-    reader = QuantReaderAgent()
-    coder = QuantCoderAgent()
-    bench = QuantBenchAgent()
-    reviewer = QuantReviewerAgent()
+    scout = QuantScoutAgent(
+        keywords=scout_keywords, skills=resolve_skills("quant_scout", agents_config)
+    )
+    reader = QuantReaderAgent(skills=resolve_skills("quant_reader", agents_config))
+    coder = QuantCoderAgent(skills=resolve_skills("quant_coder", agents_config))
+    bench = QuantBenchAgent(skills=resolve_skills("quant_bench", agents_config))
+    reviewer = QuantReviewerAgent(skills=resolve_skills("quant_reviewer", agents_config))
+
+    # Volatile inputs (timestamps, run ids) stay out of this hash so reruns
+    # on identical inputs produce identical manifest content hashes.
+    run_config = {"agents": agents_config, "benchmarks": benchmark_config}
+    runs_dir = getattr(args, "runs_dir", None)
 
     reports: list[ReviewReport] = []
     for scored in scout.rank(papers, max_papers=args.max_papers):
         analysis = reader.analyze(scored.paper)
         implementation_plan = coder.plan(analysis)
         benchmark_result = bench.evaluate(implementation_plan)
-        reports.append(reviewer.review(analysis, implementation_plan, benchmark_result))
+        report = reviewer.review(analysis, implementation_plan, benchmark_result)
+        reports.append(report)
+
+        if runs_dir:
+            manifest, store = start_run(Path(runs_dir), report.paper.slug, run_config)
+            store.write_text("report.md", report.to_markdown())
+            manifest.save(store.run_dir)
 
     if args.write_reports:
         write_reports(reports, Path(args.report_dir))
