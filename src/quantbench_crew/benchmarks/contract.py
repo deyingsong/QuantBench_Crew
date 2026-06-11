@@ -71,6 +71,15 @@ class PanelData:
         kept = {d: frame for d, frame in self._frames.items() if d <= as_of}
         return PanelData(_frames=kept, _dates=tuple(d for d in self._dates if d <= as_of))
 
+    def records(self) -> tuple[tuple[date, str, tuple[tuple[str, float], ...]], ...]:
+        """Canonical (date, asset, sorted-fields) tuples for hashing/export."""
+
+        return tuple(
+            (d, asset, tuple(sorted(self._frames[d][asset].items())))
+            for d in self._dates
+            for asset in sorted(self._frames.get(d, {}))
+        )
+
 
 @runtime_checkable
 class Strategy(Protocol):

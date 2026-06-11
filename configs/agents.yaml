@@ -76,8 +76,14 @@ agents:
     skills:
       dataset_registry:
         enabled: false
+        dataset: planted_momentum   # planted_momentum | pure_noise | french_momentum
+        params: {}
       walk_forward:
         enabled: false
+        train_periods: 36
+        test_periods: 12
+        embargo: 1
+        cost_bps: 10.0
   quant_reviewer:
     role: Research synthesis and final review
     verdicts:

@@ -1,0 +1,10 @@
+# Kenneth French momentum portfolios (cached fixture, returns in percent)
+# YYYYMM,portfolio,return_pct
+196501,Lo PRIOR,0.80
+196501,Hi PRIOR,2.30
+196502,Lo PRIOR,-0.40
+196502,Hi PRIOR,1.50
+196503,Lo PRIOR,0.10
+196503,Hi PRIOR,1.95
+196504,Lo PRIOR,-0.20
+196504,Hi PRIOR,1.60

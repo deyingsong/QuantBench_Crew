@@ -135,6 +135,8 @@ def _skills_enabled_config(tmp_path: Path) -> str:
     for name in ("pdf_acquisition", "method_spec_extraction", "target_table_extraction"):
         agents["quant_reader"]["skills"][name]["enabled"] = True
     agents["quant_coder"]["skills"]["code_generation"]["enabled"] = True
+    agents["quant_bench"]["skills"]["dataset_registry"]["enabled"] = True
+    agents["quant_bench"]["skills"]["walk_forward"]["enabled"] = True
     path = tmp_path / "agents-skills.yaml"
     path.write_text(yaml.safe_dump(config), encoding="utf-8")
     return str(path)
@@ -174,6 +176,8 @@ def test_golden_paper_flows_through_enabled_skills(tmp_path: Path) -> None:
         "method_spec_extraction",
         "target_table_extraction",
         "code_generation",
+        "dataset_registry",
+        "walk_forward",
     }
     triage = next(
         entry for entry in manifest["skill_results"]
@@ -187,6 +191,18 @@ def test_golden_paper_flows_through_enabled_skills(tmp_path: Path) -> None:
     assert codegen["status"] == "ok"
     assert codegen["payload"]["tests_passed"] == 3
     assert "generated/strategy.py" in manifest["artifacts"]
+
+    # Bench: the planted-momentum world beats the random null and the golden
+    # claim is compared against the achieved metric.
+    walk_forward = next(
+        entry for entry in manifest["skill_results"] if entry["skill"] == "walk_forward"
+    )
+    assert walk_forward["payload"]["beats_random_null"] is True
+    assert walk_forward["payload"]["comparisons"][0]["metric"] == "monthly_return"
+    assert "benchmark/walk_forward.json" in manifest["artifacts"]
+    benchmark = reports[0].benchmark_result
+    assert benchmark.dataset == "planted_momentum"
+    assert len(benchmark.comparisons) == 1
 
 
 def test_low_feasibility_paper_is_gated_but_audited(tmp_path: Path) -> None:
