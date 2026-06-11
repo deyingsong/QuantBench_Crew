@@ -176,6 +176,49 @@ class StrategyArtifact:
 
 
 @dataclass(frozen=True)
+class SpanningResult:
+    """Factor-spanning regression of candidate returns on a factor set."""
+
+    factors: tuple[str, ...]             # e.g. ("MKT","SMB","HML","RMW","CMA","MOM")
+    alpha: float                         # per-period intercept
+    alpha_tstat: float
+    betas: dict[str, float]
+    r_squared: float
+    residual_sharpe: float               # annualized, on regression residuals
+
+
+@dataclass(frozen=True)
+class DeflatedSharpe:
+    """Bailey-Lopez de Prado deflated Sharpe ratio."""
+
+    observed_sharpe: float
+    n_trials: int                        # read from the run manifest
+    deflated_sharpe: float
+    p_value: float                       # P(true SR <= benchmark) under multiple testing
+    haircut: float                       # observed - deflated
+
+
+@dataclass(frozen=True)
+class CapacityEstimate:
+    """First-order capacity / liquidity sanity proxy."""
+
+    average_turnover: float
+    adv_participation: float             # share of ADV the strategy would consume
+    capacity_usd: float | None = None
+    notes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class RobustnessReport:
+    """Subsample stability and parameter sensitivity for one strategy."""
+
+    subsample_sharpes: dict[str, float]  # e.g. {"1965-1989": .., "1990-2014": ..}
+    sign_stable: bool
+    parameter_sensitivity: dict[str, float]  # param -> sharpe spread across sweep
+    notes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class BenchmarkResult:
     """Benchmark metrics for a method or baseline."""
 
@@ -185,6 +228,9 @@ class BenchmarkResult:
     baselines: dict[str, dict[str, float]] = field(default_factory=dict)
     notes: tuple[str, ...] = ()
     comparisons: tuple[ClaimComparison, ...] = ()
+    spanning: SpanningResult | None = None
+    deflated_sharpe: DeflatedSharpe | None = None
+    capacity: CapacityEstimate | None = None
 
 
 @dataclass(frozen=True)
@@ -211,6 +257,7 @@ class ReviewReport:
     weaknesses: tuple[str, ...]
     open_questions: tuple[str, ...]
     rubric: tuple[RubricScore, ...] = ()
+    robustness: RobustnessReport | None = None
 
     def to_markdown(self) -> str:
         """Render the review as a Markdown report."""

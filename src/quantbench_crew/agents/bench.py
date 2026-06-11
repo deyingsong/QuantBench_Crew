@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from quantbench_crew.benchmarks.claims import compare_claims
+from quantbench_crew.benchmarks.spanning import spanning_from_dict
+from quantbench_crew.benchmarks.statistics import capacity_from_dict, deflated_from_dict
 from quantbench_crew.datasets.registry import load_dataset
 from quantbench_crew.models import BenchmarkResult, ImplementationPlan, PaperAnalysis
 from quantbench_crew.skills.base import RunContext, Skill, skill_settings
@@ -74,11 +76,21 @@ class QuantBenchAgent:
         }
         comparisons = compare_claims(target, metrics)
 
+        deflated = deflated_from_dict(wf.payload.get("deflated_sharpe"))
+        capacity = capacity_from_dict(wf.payload.get("capacity"))
+        spanning = spanning_from_dict(wf.payload.get("spanning"))
+
         verdict = "beats random null" if wf.payload["beats_random_null"] else "no edge over random null"
         notes = (
             f"Walk-forward on {loaded.name!r} ({loaded.frequency}, "
             f"{wf.payload['n_windows']} windows); candidate {verdict}.",
         )
+        if deflated is not None:
+            notes += (
+                f"Deflated Sharpe {deflated.deflated_sharpe:.2f} vs observed "
+                f"{deflated.observed_sharpe:.2f} over {deflated.n_trials} trials "
+                f"(p={deflated.p_value:.3f}).",
+            )
         if not comparisons:
             notes += ("No reproduction target to claim-compare against.",)
         return BenchmarkResult(
@@ -88,4 +100,7 @@ class QuantBenchAgent:
             baselines=baselines,
             notes=notes,
             comparisons=comparisons,
+            deflated_sharpe=deflated,
+            capacity=capacity,
+            spanning=spanning,
         )

@@ -11,12 +11,15 @@ the paper.
 
 from __future__ import annotations
 
+import csv
 from datetime import date
 from pathlib import Path
 
 from quantbench_crew.benchmarks.contract import PanelData
 
 DEFAULT_FIXTURE = Path("data/raw/french_momentum_monthly.csv")
+DEFAULT_FF_FIXTURE = Path("data/raw/ff_factors_monthly.csv")
+FF_FACTOR_NAMES = ("MKT", "SMB", "HML", "RMW", "CMA", "MOM")
 
 
 def load_french_momentum(path: str | Path = DEFAULT_FIXTURE) -> PanelData:
@@ -49,7 +52,42 @@ def parse_french_csv(text: str) -> PanelData:
     return PanelData.from_records(records)
 
 
+def load_ff_factors(path: str | Path = DEFAULT_FF_FIXTURE) -> dict[date, dict[str, float]]:
+    """Load monthly FF5+momentum factors keyed by month-end date (decimals).
+
+    Wide CSV: a ``YYYYMM`` (or ``date``) column plus one column per factor,
+    returns in percent. Column names are taken from the header, so any factor
+    subset works; values normalize to decimals to match strategy returns.
+    """
+
+    csv_path = Path(path)
+    if not csv_path.exists():
+        raise FileNotFoundError(
+            f"French factor file not found at {csv_path}. Provide the cached "
+            "FF5+MOM CSV (YYYYMM plus factor columns, in percent)."
+        )
+    with open(csv_path, newline="", encoding="utf-8") as handle:
+        reader = csv.reader(row for row in handle if not row.lstrip().startswith("#"))
+        header = next(reader)
+        date_col = header[0]
+        factor_cols = header[1:]
+        out: dict[date, dict[str, float]] = {}
+        for row in reader:
+            if not row or not row[0].strip() or row[0].strip().lower() in ("date", date_col.lower()):
+                continue
+            as_of = _period_to_date(row[0].strip())
+            out[as_of] = {
+                name: float(value) / 100.0
+                for name, value in zip(factor_cols, row[1:])
+                if value.strip()
+            }
+    if not out:
+        raise ValueError("No usable rows parsed from French factor file.")
+    return out
+
+
 def _period_to_date(period: str) -> date:
+    period = period.replace("-", "")
     year = int(period[:4])
     month = int(period[4:6])
     return date(year, month, 28)

@@ -49,6 +49,8 @@ class RubricVerdictSkill:
 
         triage = _manifest_payload(ctx, "reproducibility_triage")
         walk_forward = _manifest_payload(ctx, "walk_forward")
+        deflated = (walk_forward or {}).get("deflated_sharpe")
+        robustness = (walk_forward or {}).get("robustness")
 
         placeholder_used = walk_forward is None or any(
             "placeholder" in note.lower() for note in benchmark.notes
@@ -56,13 +58,16 @@ class RubricVerdictSkill:
 
         rubric = (
             _reproducibility(benchmark),
-            _robustness(walk_forward),
-            _net_of_cost_viability(benchmark, walk_forward),
+            _robustness(robustness),
+            _net_of_cost_viability(benchmark, walk_forward, deflated),
             _novelty_vs_baselines(benchmark, walk_forward),
             _data_accessibility(triage),
         )
+        red_team = _red_team(analysis)
 
-        verdict = _derive_verdict(rubric, walk_forward, placeholder_used)
+        verdict = _derive_verdict(
+            rubric, walk_forward, deflated, robustness, red_team, placeholder_used
+        )
         strengths = tuple(
             f"{score.dimension}: {score.rationale}"
             for score in rubric
@@ -72,7 +77,12 @@ class RubricVerdictSkill:
             f"{score.dimension}: {score.rationale}"
             for score in rubric
             if score.score <= 1
-        ) or ("No dimension scored a clear weakness.",)
+        ) + tuple(
+            f"red flag [{item['severity']}] {item['kind']}: {item['rationale']}"
+            for item in red_team
+        )
+        if not weaknesses:
+            weaknesses = ("No dimension scored a clear weakness.",)
 
         result = SkillResult(
             skill=self.name,
@@ -83,10 +93,13 @@ class RubricVerdictSkill:
                 "rubric": [_rubric_dict(score) for score in rubric],
                 "strengths": list(strengths),
                 "weaknesses": list(weaknesses),
+                "red_team": red_team,
             },
             notes=(
                 f"verdict {verdict!r}"
                 + (" (placeholder data present)" if placeholder_used else ""),
+                f"{len(red_team)} red flag(s); robustness sign-stable="
+                f"{bool((robustness or {}).get('sign_stable', False))}",
             ),
         )
         ctx.manifest.record_skill(result)
@@ -131,38 +144,51 @@ def _reproducibility(benchmark: BenchmarkResult) -> RubricScore:
     return RubricScore("reproducibility", score, rationale, evidence)
 
 
-def _robustness(walk_forward: dict[str, Any] | None) -> RubricScore:
-    if walk_forward is None:
-        return RubricScore("robustness", 0, "no walk-forward evaluation was run")
-    n_windows = int(walk_forward.get("n_windows", 0))
-    score = 4 if n_windows >= 8 else 3 if n_windows >= 4 else 2 if n_windows >= 2 else 1
+def _robustness(robustness: dict[str, Any] | None) -> RubricScore:
+    if not robustness:
+        return RubricScore("robustness", 0, "no robustness analysis was run")
+    sign_stable = bool(robustness.get("sign_stable"))
+    subsamples = robustness.get("subsample_sharpes", {})
+    spread = float(robustness.get("parameter_sensitivity", {}).get("spread", 0.0))
+    if sign_stable and spread < 1.0:
+        score = 4
+    elif sign_stable:
+        score = 3
+    elif subsamples:
+        score = 1
+    else:
+        score = 0
     evidence = (
         EvidenceLink(
             kind="artifact",
             reference="benchmark/walk_forward.json",
-            detail=f"out-of-sample over {n_windows} purged/embargoed windows",
+            detail=f"subsample sharpes {subsamples}; parameter-sweep spread {spread:.2f}",
         ),
     )
-    return RubricScore(
-        "robustness",
-        score,
-        f"evaluated out-of-sample across {n_windows} walk-forward windows",
-        evidence,
+    rationale = (
+        ("sign-stable" if sign_stable else "sign-UNSTABLE")
+        + f" across subsamples; parameter-sweep Sharpe spread {spread:.2f}"
     )
+    return RubricScore("robustness", score, rationale, evidence)
 
 
 def _net_of_cost_viability(
-    benchmark: BenchmarkResult, walk_forward: dict[str, Any] | None
+    benchmark: BenchmarkResult,
+    walk_forward: dict[str, Any] | None,
+    deflated: dict[str, Any] | None,
 ) -> RubricScore:
     if walk_forward is None:
         return RubricScore("net_of_cost_viability", 0, "no net-of-cost benchmark available")
     sharpe = float(benchmark.metrics.get("sharpe", 0.0))
     beats_null = bool(walk_forward.get("beats_random_null", False))
-    if beats_null and sharpe >= 1.0:
+    p_value = float((deflated or {}).get("p_value", 1.0))
+    dsr = float((deflated or {}).get("deflated_sharpe", 0.0))
+    survives = p_value < 0.05 and dsr > 0.0
+    if beats_null and survives and sharpe >= 1.0:
         score = 4
-    elif beats_null and sharpe > 0:
+    elif beats_null and survives:
         score = 3
-    elif sharpe > 0:
+    elif beats_null and sharpe > 0:
         score = 2
     else:
         score = 1
@@ -170,15 +196,20 @@ def _net_of_cost_viability(
         EvidenceLink(
             kind="metric",
             reference="benchmark/walk_forward.json",
-            detail=f"net-of-cost annualized Sharpe {sharpe:.2f}; beats random null: {beats_null}",
+            detail=(
+                f"net Sharpe {sharpe:.2f}; deflated {dsr:.2f} (p={p_value:.3f}); "
+                f"beats random null: {beats_null}"
+            ),
         ),
     )
     return RubricScore(
         "net_of_cost_viability",
         score,
-        f"net-of-cost Sharpe {sharpe:.2f}, "
+        f"net Sharpe {sharpe:.2f}; deflated {dsr:.2f} (p={p_value:.3f}) "
+        + ("survives" if survives else "does not survive")
+        + " multiple testing; "
         + ("beats" if beats_null else "does not beat")
-        + " the random-matched-turnover null",
+        + " the random null",
         evidence,
     )
 
@@ -230,9 +261,29 @@ def _data_accessibility(triage: dict[str, Any] | None) -> RubricScore:
     )
 
 
+def _red_team(analysis: PaperAnalysis) -> list[dict[str, Any]]:
+    """The quant-pitfalls checklist, auto-filled from the reader's red flags."""
+
+    return [
+        {
+            "kind": flag.kind,
+            "severity": flag.severity,
+            "rationale": flag.rationale,
+            "evidence": [
+                {"kind": link.kind, "reference": link.reference, "detail": link.detail}
+                for link in flag.evidence
+            ],
+        }
+        for flag in analysis.red_flags
+    ]
+
+
 def _derive_verdict(
     rubric: tuple[RubricScore, ...],
     walk_forward: dict[str, Any] | None,
+    deflated: dict[str, Any] | None,
+    robustness: dict[str, Any] | None,
+    red_team: list[dict[str, Any]],
     placeholder_used: bool,
 ) -> str:
     if placeholder_used:
@@ -240,9 +291,19 @@ def _derive_verdict(
     by_dimension = {score.dimension: score.score for score in rubric}
     repro = by_dimension.get("reproducibility", 0)
     beats_null = bool((walk_forward or {}).get("beats_random_null", False))
-    if repro >= 3 and beats_null:
+    survives = (
+        float((deflated or {}).get("p_value", 1.0)) < 0.05
+        and float((deflated or {}).get("deflated_sharpe", 0.0)) > 0.0
+    )
+    sign_stable = bool((robustness or {}).get("sign_stable", False))
+    has_critical = any(item["severity"] == "critical" for item in red_team)
+
+    # "Promising" must clear every bar: reproduces, beats the null, survives
+    # the multiple-testing deflation, is sign-stable, and carries no critical
+    # red flag. Any one failing drops it to inconclusive.
+    if repro >= 3 and beats_null and survives and sign_stable and not has_critical:
         return "promising"
-    if beats_null or repro >= 2:
+    if (beats_null or repro >= 2) and not has_critical:
         return "inconclusive"
     return "weak"
 

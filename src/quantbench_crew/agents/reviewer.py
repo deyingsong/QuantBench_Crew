@@ -51,12 +51,22 @@ class QuantReviewerAgent:
         open_questions: tuple[str, ...],
         ctx: RunContext,
     ) -> ReviewReport:
+        from quantbench_crew.benchmarks.robustness import robustness_from_dict
         from quantbench_crew.skills.reviewer.rubric import build_rubric
 
         result = self.skills["rubric_verdict"].run(
             ctx, analysis=analysis, benchmark_result=benchmark_result
         )
         payload = result.payload
+
+        # The robustness report lives in the walk-forward payload; surface it
+        # on the report so the markdown and downstream consumers can read it.
+        robustness = None
+        for skill_result in reversed(ctx.manifest.skill_results):
+            if skill_result.skill == "walk_forward":
+                robustness = robustness_from_dict(skill_result.payload.get("robustness"))
+                break
+
         return ReviewReport(
             paper=analysis.paper,
             analysis=analysis,
@@ -67,6 +77,7 @@ class QuantReviewerAgent:
             weaknesses=tuple(payload["weaknesses"]),
             open_questions=open_questions,
             rubric=build_rubric(payload),
+            robustness=robustness,
         )
 
     def _review_static(

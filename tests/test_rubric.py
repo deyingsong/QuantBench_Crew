@@ -24,7 +24,15 @@ def _analysis(title: str) -> PaperAnalysis:
     )
 
 
-def _seed_manifest(ctx, *, data_tier: str, beats_null: bool, n_windows: int = 10) -> None:
+def _seed_manifest(
+    ctx,
+    *,
+    data_tier: str,
+    beats_null: bool,
+    n_windows: int = 10,
+    survives: bool = True,
+    sign_stable: bool = True,
+) -> None:
     ctx.manifest.record_skill(
         SkillResult(
             skill="reproducibility_triage",
@@ -36,7 +44,23 @@ def _seed_manifest(ctx, *, data_tier: str, beats_null: bool, n_windows: int = 10
         SkillResult(
             skill="walk_forward",
             status="ok",
-            payload={"beats_random_null": beats_null, "n_windows": n_windows},
+            payload={
+                "beats_random_null": beats_null,
+                "n_windows": n_windows,
+                "deflated_sharpe": {
+                    "observed_sharpe": 2.0,
+                    "n_trials": 3,
+                    "deflated_sharpe": 1.0 if survives else 0.0,
+                    "p_value": 0.01 if survives else 0.9,
+                    "haircut": 1.0,
+                },
+                "robustness": {
+                    "subsample_sharpes": {"a": 1.0, "b": 0.8 if sign_stable else -0.5},
+                    "sign_stable": sign_stable,
+                    "parameter_sensitivity": {"spread": 0.3},
+                    "notes": [],
+                },
+            },
         )
     )
 

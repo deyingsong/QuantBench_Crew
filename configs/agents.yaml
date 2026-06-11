@@ -103,6 +103,9 @@ agents:
         test_periods: 12
         embargo: 1
         cost_bps: 10.0
+        # Optional FF5+momentum factors CSV (YYYYMM + factor columns, percent)
+        # for the spanning regression; spanning is skipped when unset/absent.
+        factors_path: ""
   quant_reviewer:
     role: Research synthesis and final review
     verdicts:

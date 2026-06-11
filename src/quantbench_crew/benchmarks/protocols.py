@@ -15,7 +15,7 @@ the return realized at ``t+1``, and every strategy is handed ``data.up_to(t)``.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 
 from quantbench_crew.benchmarks.contract import PanelData, Strategy
@@ -36,6 +36,7 @@ class WalkForwardResult:
     net_returns: list[float]
     turnovers: list[float]
     windows: tuple[WalkForwardWindow, ...]
+    return_dates: list[date] = field(default_factory=list)  # realized-return date per return
 
     @property
     def average_turnover(self) -> float:
@@ -86,6 +87,7 @@ def run_walk_forward(
 
     gross_returns: list[float] = []
     turnovers: list[float] = []
+    return_dates: list[date] = []
     prev_weights: dict[str, float] = {}
 
     for window in windows:
@@ -107,6 +109,7 @@ def run_walk_forward(
                 )
             )
             turnovers.append(_turnover(prev_weights, weights))
+            return_dates.append(next_date)
             prev_weights = weights
 
     net_returns = apply_linear_costs(gross_returns, turnovers, cost_bps)
@@ -115,6 +118,7 @@ def run_walk_forward(
         net_returns=net_returns,
         turnovers=turnovers,
         windows=tuple(windows),
+        return_dates=return_dates,
     )
 
 
