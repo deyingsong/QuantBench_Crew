@@ -1,3 +1,5 @@
+# Recommended development environment. The package itself is stdlib + PyYAML;
+# everything beyond that is an optional tier (see README "Install").
 name: quantbench-crew
 channels:
   - conda-forge
@@ -9,4 +11,14 @@ dependencies:
   - pyyaml>=6.0.1
   - pytest>=8.0
   - pip:
+      # Core package (editable) + PaperQA2 full-text reading.
       - -e .[paperqa]
+      # --- Optional tiers (uncomment what you need) -------------------------
+      # Live LLM provider for extraction/codegen (llm.provider: anthropic in
+      # configs/agents.yaml). The dry workflow and the recorded-fixture tests
+      # never require it.
+      # - anthropic
+      # Numeric stack for generated ML strategies in the sandbox and future
+      # nonlinear models. The stdlib dry workflow, the CRSP loader, and the
+      # eval suite never require it.
+      # - -e .[paperqa,numeric]

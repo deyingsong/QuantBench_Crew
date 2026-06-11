@@ -84,7 +84,7 @@ agents:
       code_generation:
         enabled: false
         iterations: 3
-        adapter: complete   # 'agent' (headless Claude Code) reserved, not yet implemented
+        adapter: complete   # complete | agent (headless Claude Code; falls back when unavailable)
   quant_bench:
     role: Benchmark evaluation and robustness checks
     default_metrics:
@@ -95,7 +95,7 @@ agents:
     skills:
       dataset_registry:
         enabled: false
-        dataset: planted_momentum   # planted_momentum | pure_noise | french_momentum
+        dataset: planted_momentum   # planted_momentum | pure_noise | french_momentum | crsp
         params: {}
       walk_forward:
         enabled: false
