@@ -219,6 +219,31 @@ class RobustnessReport:
 
 
 @dataclass(frozen=True)
+class EvalCase:
+    """One paper in the system's own regression suite."""
+
+    slug: str
+    paper: Paper
+    data_tier: str                       # "french" | "crsp" | "synthetic"
+    expected_outcome: str                # "reproduces" | "does_not_reproduce"
+    targets: ReproductionTarget
+    strategy: str = "momentum"           # named strategy the bench should run
+    dataset: str = "planted_momentum"
+    dataset_params: dict[str, Any] = field(default_factory=dict)
+    notes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class EvalResult:
+    """Outcome of running one EvalCase through the pipeline."""
+
+    case: EvalCase
+    achieved_verdict: str
+    matches_expected: bool
+    detail: str = ""
+
+
+@dataclass(frozen=True)
 class BenchmarkResult:
     """Benchmark metrics for a method or baseline."""
 

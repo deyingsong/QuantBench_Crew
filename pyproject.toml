@@ -53,6 +53,10 @@ quantbench_crew = ["prompts/*.txt"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+# The eval regression suite runs real-data CRSP cases and is slow, so it is
+# deselected by default; CI runs it explicitly with `pytest -m eval`.
+addopts = ["-m", "not eval"]
 markers = [
   "e2e: full-pipeline golden-paper and synthetic-noise-gate tests",
+  "eval: system regression suite over the curated evaluation set (slow; CRSP)",
 ]

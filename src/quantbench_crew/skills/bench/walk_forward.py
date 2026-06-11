@@ -21,8 +21,8 @@ from statistics import median
 from typing import Any
 
 from quantbench_crew.artifacts import ArtifactStore
-from quantbench_crew.benchmarks import reference_momentum
 from quantbench_crew.benchmarks.baselines import build_baselines
+from quantbench_crew.benchmarks.strategies import build_named_strategy, strategy_purge
 from quantbench_crew.benchmarks.claims import compare_claims
 from quantbench_crew.benchmarks.protocols import (
     evaluate_walk_forward,
@@ -65,20 +65,24 @@ class WalkForwardSkill:
         target = inputs.get("target")
         settings = skill_settings(ctx.config, "quant_bench", self.name)
 
-        params = _strategy_params(spec)
+        strategy_name = str(settings.get("strategy", "momentum"))
+        params = {**_strategy_params(spec), **dict(settings.get("strategy_params", {}))}
         train_periods = int(settings.get("train_periods", DEFAULTS["train_periods"]))
         test_periods = int(settings.get("test_periods", DEFAULTS["test_periods"]))
         embargo = int(settings.get("embargo", DEFAULTS["embargo"]))
         cost_bps = float(settings.get("cost_bps", DEFAULTS["cost_bps"]))
-        purge = params["formation_periods"] + params["skip_periods"]
+        purge = strategy_purge(strategy_name, params)
         freq = dataset.frequency
+
+        def build(strategy_params):
+            return build_named_strategy(strategy_name, strategy_params)
 
         windows = walk_forward_windows(
             dataset.panel.dates(), train_periods, test_periods, purge=purge, embargo=embargo
         )
 
         candidate_result = run_walk_forward(
-            reference_momentum.build_strategy(params), dataset.panel, windows, cost_bps=cost_bps
+            build(params), dataset.panel, windows, cost_bps=cost_bps
         )
         candidate_metrics = evaluate_walk_forward(candidate_result, freq)
         baseline_metrics = {
@@ -106,7 +110,7 @@ class WalkForwardSkill:
         spanning = self._spanning(candidate_result, settings, freq)
         # QB-27: robustness — subsample stability + parameter sweep.
         robustness = build_robustness_report(
-            reference_momentum.build_strategy, dataset.panel, windows, params, freq, cost_bps=cost_bps
+            build, dataset.panel, windows, params, freq, cost_bps=cost_bps
         )
 
         payload = {
