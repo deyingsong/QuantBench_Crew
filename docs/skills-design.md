@@ -509,6 +509,8 @@ workstreams B-D in parallel, closing with QB-11, QB-14, QB-15, QB-16.
 - **Phase 2:** the P1 items above, plus a golden-paper evaluation set (3-5
   papers with known-good reproductions, e.g. cross-sectional momentum, FF
   factors, Gu-Kelly-Xiu) run in CI as regression tests for the system itself.
+  Now planned in full in [phase2-design.md](phase2-design.md) (QB-17 .. QB-35,
+  extraction/ingestion depth front-loaded, GKX reproduced on real CRSP data).
 - **Phase 3:** parallel paper runs, LLM call caching, human-in-the-loop
   checkpoints before any "promising" verdict ships. (Per-paper cost caps
   moved to P1; see the roadmap cross-cutting notes.)
