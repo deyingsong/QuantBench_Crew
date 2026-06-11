@@ -19,7 +19,7 @@ from typing import Any
 
 from quantbench_crew.artifacts import stable_hash
 from quantbench_crew.benchmarks.contract import PanelData
-from quantbench_crew.datasets import french, synthetic
+from quantbench_crew.datasets import crsp, french, synthetic
 
 REGISTRY_VERSION = "1"
 
@@ -91,9 +91,22 @@ def load_dataset(name: str, params: Mapping[str, Any] | None = None) -> LoadedDa
         panel = french.load_french_momentum(path)
         return _build(name, "monthly", panel, None, params)
 
+    if name == "crsp":
+        panel = crsp.load_crsp(
+            params.get("daily_path", crsp.DEFAULT_DAILY_PATH),
+            params.get("delisting_path", crsp.DEFAULT_DELISTING_PATH),
+            security_types=params.get("security_types", crsp.DEFAULT_SECURITY_TYPES),
+            share_types=params.get("share_types", crsp.DEFAULT_SHARE_TYPES),
+            exchanges=params.get("exchanges", crsp.DEFAULT_EXCHANGES),
+            min_price=float(params.get("min_price", 0.0)),
+            cap_percentile=float(params.get("cap_percentile", 0.0)),
+            cache_path=params.get("cache_path"),
+        )
+        return _build(name, "monthly", panel, None, params)
+
     raise ValueError(
-        f"unknown dataset {name!r}; expected planted_momentum, pure_noise, or "
-        "french_momentum"
+        f"unknown dataset {name!r}; expected planted_momentum, pure_noise, "
+        "french_momentum, or crsp"
     )
 
 

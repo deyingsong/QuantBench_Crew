@@ -1,6 +1,7 @@
 google_paper/
 runs/
 data/raw/
+data/processed/
 .DS_Store
 __pycache__/
 *.py[cod]

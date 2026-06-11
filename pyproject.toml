@@ -33,6 +33,13 @@ dev = [
 paperqa = [
   "paper-qa>=5,<2027",
 ]
+# Real-data and ML paths only. The stdlib dry workflow never requires these;
+# every skill that uses them checks quantbench_crew.numeric.*_available().
+numeric = [
+  "numpy>=1.26",
+  "pandas>=2.0",
+  "scikit-learn>=1.3",
+]
 
 [project.scripts]
 quantbench = "quantbench_crew.main:main"
