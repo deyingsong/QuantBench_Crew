@@ -1,10 +1,12 @@
-"""Target-table extraction: headline claims into a ReproductionTarget.
+"""Target-table extraction: falsifiable claims into a ReproductionTarget.
 
 Without a quantitative target, reproduction is unfalsifiable — so this skill
 either produces claims with values, tolerances, and sources, or reports
 "skipped" loudly. The LLM path is schema-validated; the deterministic
-fallback scans the abstract for explicit numeric claims (percent-per-period
-and Sharpe-ratio phrasings) and never invents numbers.
+fallback enumerates *every* explicit numeric claim it can recognize
+(returns per period, Sharpe, t-statistics, alpha, information ratio) and
+never invents numbers. Enumerating the full claim set — not just the headline
+— is what lets the bench check a paper on more than one falsifiable axis.
 """
 
 from __future__ import annotations
@@ -52,7 +54,20 @@ TARGET_SCHEMA: dict[str, Any] = {
 _PERCENT_PER_PERIOD = re.compile(
     r"(\d+(?:\.\d+)?)\s*(?:%|percent)\s*per\s*(month|year|annum)", re.IGNORECASE
 )
-_SHARPE = re.compile(r"sharpe ratios? of\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
+_SHARPE = re.compile(
+    r"(?:annualized\s+)?sharpe(?:\s+ratio)?s?\s+of\s+(\d+(?:\.\d+)?)", re.IGNORECASE
+)
+_TSTAT = re.compile(
+    r"t-?stat(?:istic)?s?\s*(?:of|=|:)\s*(\d+(?:\.\d+)?)", re.IGNORECASE
+)
+_ALPHA = re.compile(
+    r"(monthly|annual|annualized)?\s*alpha\s+of\s+(\d+(?:\.\d+)?)\s*(?:%|percent)"
+    r"(?:\s*per\s*(month|year))?",
+    re.IGNORECASE,
+)
+_INFO_RATIO = re.compile(
+    r"information ratios?\s+of\s+(\d+(?:\.\d+)?)", re.IGNORECASE
+)
 
 
 def build_target_table_prompt(paper: Paper) -> str:
@@ -174,29 +189,51 @@ def _normalize_claim(claim: dict[str, Any], default_tolerance: float) -> dict[st
 
 
 def _abstract_claims(paper: Paper) -> dict[str, Any]:
+    text = paper.abstract
     claims: list[dict[str, Any]] = []
-    for match in _PERCENT_PER_PERIOD.finditer(paper.abstract):
-        period = match.group(2).lower()
+
+    def add(metric: str, value: float, unit: str, start: int, end: int) -> None:
         claims.append(
             {
-                "metric": "monthly_return" if period == "month" else "annual_return",
-                "value": float(match.group(1)) / 100.0,
-                "unit": "monthly" if period == "month" else "annualized",
-                "context": _surrounding_text(paper.abstract, match.start(), match.end()),
+                "metric": metric,
+                "value": value,
+                "unit": unit,
+                "context": _surrounding_text(text, start, end),
                 "source": "abstract",
             }
         )
-    for match in _SHARPE.finditer(paper.abstract):
-        claims.append(
-            {
-                "metric": "sharpe",
-                "value": float(match.group(1)),
-                "unit": "annualized",
-                "context": _surrounding_text(paper.abstract, match.start(), match.end()),
-                "source": "abstract",
-            }
+
+    for m in _PERCENT_PER_PERIOD.finditer(text):
+        period = m.group(2).lower()
+        add(
+            "monthly_return" if period == "month" else "annual_return",
+            float(m.group(1)) / 100.0,
+            "monthly" if period == "month" else "annualized",
+            m.start(), m.end(),
         )
-    return {"table_reference": "", "claims": claims, "notes": []}
+    for m in _SHARPE.finditer(text):
+        add("sharpe", float(m.group(1)), "annualized", m.start(), m.end())
+    for m in _TSTAT.finditer(text):
+        add("t_statistic", float(m.group(1)), "", m.start(), m.end())
+    for m in _ALPHA.finditer(text):
+        period = (m.group(3) or "").lower()
+        unit = "monthly" if period == "month" else "annualized" if period == "year" else (m.group(1) or "").lower()
+        add("alpha", float(m.group(2)) / 100.0, unit or "monthly", m.start(), m.end())
+    for m in _INFO_RATIO.finditer(text):
+        add("information_ratio", float(m.group(1)), "annualized", m.start(), m.end())
+
+    return {"table_reference": "", "claims": _dedup_claims(claims), "notes": []}
+
+
+def _dedup_claims(claims: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[tuple[str, float]] = set()
+    unique: list[dict[str, Any]] = []
+    for claim in claims:
+        key = (claim["metric"], round(claim["value"], 6))
+        if key not in seen:
+            seen.add(key)
+            unique.append(claim)
+    return unique
 
 
 def _surrounding_text(text: str, start: int, end: int, radius: int = 80) -> str:

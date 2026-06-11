@@ -34,6 +34,7 @@ class ScoredPaper:
     paper: Paper
     score: float
     reasons: tuple[str, ...] = ()
+    relevance: RelevanceAssessment | None = None
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,39 @@ class EvidenceLink:
     kind: str         # "artifact" | "paper_quote" | "metric" | "test"
     reference: str    # artifact path, manifest key, or citation
     detail: str = ""
+
+
+@dataclass(frozen=True)
+class ResearchCharter:
+    """Configurable statement of what research is in scope for the scout."""
+
+    purpose: str
+    themes: tuple[str, ...] = ()
+    must_have: tuple[str, ...] = ()      # e.g. "out-of-sample test", "net of costs"
+    exclude: tuple[str, ...] = ()        # e.g. "pure theory", "no empirics"
+    source_path: str = ""
+
+
+@dataclass(frozen=True)
+class RelevanceAssessment:
+    """Charter-relative relevance for one candidate paper."""
+
+    score: float                         # 0-1
+    method: str                          # "embedding" | "charter_overlap"
+    matched_themes: tuple[str, ...] = ()
+    rationale: str = ""
+
+
+@dataclass(frozen=True)
+class RedFlag:
+    """A detected quant-research pitfall, with the evidence for it."""
+
+    kind: str        # "no_transaction_costs" | "in_sample_tuning"
+                     # | "survivorship_prone" | "microcap_driven"
+                     # | "short_sample" | "data_snooping"
+    severity: str    # "info" | "warning" | "critical"
+    rationale: str
+    evidence: tuple[EvidenceLink, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -114,6 +148,8 @@ class PaperAnalysis:
     limitations: tuple[str, ...]
     method_spec: MethodSpec | None = None
     reproduction_target: ReproductionTarget | None = None
+    relevance: RelevanceAssessment | None = None
+    red_flags: tuple[RedFlag, ...] = ()
 
 
 @dataclass(frozen=True)

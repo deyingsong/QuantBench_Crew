@@ -83,14 +83,56 @@ _CONSTRUCTION_MARKERS = (
 )
 
 
-def build_method_spec_prompt(analysis: PaperAnalysis) -> str:
+FULLTEXT_CONFIDENCE_FLOOR = 0.7
+FULLTEXT_EXCERPT_CHARS = 8000
+
+
+def build_method_spec_prompt(analysis: PaperAnalysis, full_text: str = "") -> str:
     template = load_prompt(PROMPT_NAME)
-    return template.format(
+    prompt = template.format(
         title=analysis.paper.title,
         abstract=analysis.paper.abstract,
         proposed_method=analysis.proposed_method,
         datasets=", ".join(analysis.datasets) or "not identified",
     )
+    # Appended only when present, so the abstract-only prompt (and its
+    # recorded fixtures) stays byte-identical.
+    if full_text:
+        prompt += "\n\nFull-text excerpts (authoritative over the abstract):\n"
+        prompt += full_text[:FULLTEXT_EXCERPT_CHARS]
+    return prompt
+
+
+def field_match_rate(
+    extracted: dict[str, Any],
+    reference: dict[str, Any],
+    fields: tuple[str, ...] = (
+        "universe",
+        "frequency",
+        "signal_definition",
+        "portfolio_construction",
+        "rebalance_frequency",
+        "holding_period",
+    ),
+) -> float:
+    """Fraction of key fields that match the hand-labeled reference.
+
+    String fields match on case-insensitive substring containment in either
+    direction, so "monthly" matches "monthly, overlapping". This is the
+    ground-truth check QB-19's acceptance uses against the labeled fixtures.
+    """
+
+    if not fields:
+        return 0.0
+    hits = 0
+    for field_name in fields:
+        got = str(extracted.get(field_name, "")).strip().lower()
+        want = str(reference.get(field_name, "")).strip().lower()
+        if want and got and (want in got or got in want):
+            hits += 1
+        elif not want and not got:
+            hits += 1
+    return hits / len(fields)
 
 
 class MethodSpecExtractionSkill:
@@ -103,6 +145,7 @@ class MethodSpecExtractionSkill:
 
     def run(self, ctx: RunContext, **inputs: Any) -> SkillResult:
         analysis: PaperAnalysis = inputs["analysis"]
+        full_text = str(inputs.get("full_text") or "")
         notes: list[str] = []
         spec_payload: dict[str, Any] | None = None
         source = "metadata_fallback"
@@ -111,7 +154,7 @@ class MethodSpecExtractionSkill:
         if ctx.llm is None:
             notes.append("no LLM configured; using deterministic metadata fallback")
         else:
-            prompt = build_method_spec_prompt(analysis)
+            prompt = build_method_spec_prompt(analysis, full_text)
             try:
                 response = ctx.llm.complete(prompt, system=SYSTEM_PROMPT)
                 candidate = extract_json_object(response.text)
@@ -123,12 +166,22 @@ class MethodSpecExtractionSkill:
                     )
                 else:
                     spec_payload = _normalize(candidate)
-                    source = "llm"
+                    if full_text:
+                        # Full text is authoritative: floor the confidence so
+                        # a full-text extraction outranks the metadata fallback.
+                        source = "llm_fulltext"
+                        spec_payload["confidence"] = max(
+                            spec_payload["confidence"], FULLTEXT_CONFIDENCE_FLOOR
+                        )
+                        detail = "schema-validated full-text completion via the LLM seam"
+                    else:
+                        source = "llm"
+                        detail = "schema-validated completion via the LLM seam"
                     evidence = [
                         {
                             "kind": "artifact",
                             "reference": f"llm:{response.fingerprint}",
-                            "detail": "schema-validated completion via the LLM seam",
+                            "detail": detail,
                         }
                     ]
             except Exception as exc:  # boundary: fall back, but record why

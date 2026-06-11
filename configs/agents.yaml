@@ -26,9 +26,26 @@ agents:
       - forecasting
       - risk
       - machine learning
+    charter:
+      purpose: >-
+        Reproducible cross-sectional equity return predictability with
+        out-of-sample, net-of-cost evaluation.
+      themes:
+        - momentum
+        - value
+        - cross-section
+        - machine learning
+        - factor
+      must_have:
+        - returns
+      exclude:
+        - pure theory
     skills:
       arxiv_search:
         enabled: false
+      charter_relevance:
+        enabled: false
+        relevance_boost: 10.0
       reproducibility_triage:
         enabled: false
         threshold: 0.5
@@ -51,6 +68,8 @@ agents:
         enabled: false
         default_tolerance: 0.2
       method_spec_extraction:
+        enabled: false
+      red_flag_scan:
         enabled: false
   quant_coder:
     role: ERA-backed reproducible implementation planning

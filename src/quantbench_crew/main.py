@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from quantbench_crew.agents import (
@@ -19,7 +20,13 @@ from quantbench_crew.llm import build_llm_client
 from quantbench_crew.models import ReviewReport
 from quantbench_crew.skills import resolve_skills
 from quantbench_crew.skills.base import RunContext
-from quantbench_crew.tools.arxiv_tool import load_local_papers, search_arxiv
+from quantbench_crew.skills.scout.charter_relevance import load_charter, relevance_boost
+from quantbench_crew.tools.arxiv_tool import (
+    DEFAULT_PROCESSED_PATH,
+    ProcessedRegistry,
+    load_local_papers,
+    search_arxiv,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -58,6 +65,16 @@ def build_parser() -> argparse.ArgumentParser:
         default="runs",
         help="Directory for run manifests; each paper run writes <runs-dir>/<run_id>/manifest.json.",
     )
+    run.add_argument(
+        "--processed-path",
+        default=str(DEFAULT_PROCESSED_PATH),
+        help="Persistent processed-paper watermark for cross-run dedup (arxiv source).",
+    )
+    run.add_argument(
+        "--no-dedup",
+        action="store_true",
+        help="Disable dedup against already-processed papers (arxiv source).",
+    )
     return parser
 
 
@@ -80,11 +97,14 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         .get("default_keywords")
     )
 
-    papers = (
-        search_arxiv(args.query, max_results=args.max_papers)
-        if args.source == "arxiv"
-        else load_local_papers(args.paper_json)
-    )
+    registry: ProcessedRegistry | None = None
+    if args.source == "arxiv":
+        papers = search_arxiv(args.query, max_results=args.max_papers)
+        if not getattr(args, "no_dedup", False):
+            registry = ProcessedRegistry(getattr(args, "processed_path", DEFAULT_PROCESSED_PATH))
+            papers = registry.filter_unseen(papers)
+    else:
+        papers = load_local_papers(args.paper_json)
 
     agent_skills = {
         name: resolve_skills(name, agents_config)
@@ -103,7 +123,12 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
             "(or disable the skills in the agents config)."
         )
 
-    scout = QuantScoutAgent(keywords=scout_keywords, skills=agent_skills["quant_scout"])
+    scout = QuantScoutAgent(
+        keywords=scout_keywords,
+        skills=agent_skills["quant_scout"],
+        charter=load_charter(agents_config),
+        relevance_boost=relevance_boost(agents_config),
+    )
     reader = QuantReaderAgent(skills=agent_skills["quant_reader"])
     coder = QuantCoderAgent(skills=agent_skills["quant_coder"])
     bench = QuantBenchAgent(skills=agent_skills["quant_bench"])
@@ -114,7 +139,8 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
     run_config = {"agents": agents_config, "benchmarks": benchmark_config}
 
     reports: list[ReviewReport] = []
-    for scored in scout.rank(papers, max_papers=args.max_papers):
+    ranked = scout.rank(papers, max_papers=args.max_papers)
+    for scored in ranked:
         ctx = None
         manifest = store = None
         if runs_dir:
@@ -135,7 +161,10 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
                 manifest.save(store.run_dir)
             continue
 
+        scout.record_relevance(scored, ctx)
         analysis = reader.analyze(scored.paper, ctx=ctx)
+        if scored.relevance is not None:
+            analysis = replace(analysis, relevance=scored.relevance)
         implementation_plan = coder.plan(analysis)
         coder.generate(analysis, implementation_plan, ctx)
         benchmark_result = bench.evaluate(
@@ -149,6 +178,13 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         if manifest is not None and store is not None:
             store.write_text("report.md", report.to_markdown())
             manifest.save(store.run_dir)
+
+    if registry is not None:
+        # Every ranked paper has now been looked at (processed or gated);
+        # mark them so a re-run of the same window fetches nothing new.
+        for scored in ranked:
+            registry.mark(scored.paper)
+        registry.save()
 
     if args.write_reports:
         write_reports(reports, Path(args.report_dir))

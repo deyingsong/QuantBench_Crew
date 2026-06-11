@@ -132,7 +132,13 @@ def _skills_enabled_config(tmp_path: Path) -> str:
     config = load_config("configs/agents.yaml")
     agents = config["agents"]
     agents["quant_scout"]["skills"]["reproducibility_triage"]["enabled"] = True
-    for name in ("pdf_acquisition", "method_spec_extraction", "target_table_extraction"):
+    agents["quant_scout"]["skills"]["charter_relevance"]["enabled"] = True
+    for name in (
+        "pdf_acquisition",
+        "method_spec_extraction",
+        "target_table_extraction",
+        "red_flag_scan",
+    ):
         agents["quant_reader"]["skills"][name]["enabled"] = True
     agents["quant_coder"]["skills"]["code_generation"]["enabled"] = True
     agents["quant_bench"]["skills"]["dataset_registry"]["enabled"] = True
@@ -168,14 +174,20 @@ def test_golden_paper_flows_through_enabled_skills(tmp_path: Path) -> None:
     assert analysis.method_spec.frequency == "monthly"
     assert analysis.reproduction_target is not None
     assert analysis.reproduction_target.claims[0].value == pytest.approx(0.0095)
+    # Charter relevance attached; red-flag scan caught the gross-of-cost claim.
+    assert analysis.relevance is not None
+    assert analysis.relevance.method == "charter_overlap"
+    assert "no_transaction_costs" in {flag.kind for flag in analysis.red_flags}
 
     manifest = _load_manifests(tmp_path / "runs")[0]
     recorded = {entry["skill"] for entry in manifest["skill_results"]}
     assert recorded == {
+        "charter_relevance",
         "reproducibility_triage",
         "pdf_acquisition",
         "method_spec_extraction",
         "target_table_extraction",
+        "red_flag_scan",
         "code_generation",
         "dataset_registry",
         "walk_forward",

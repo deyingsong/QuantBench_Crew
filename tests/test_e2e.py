@@ -26,7 +26,8 @@ def _config(tmp_path: Path, dataset: str, params: dict) -> str:
     config = load_config("configs/agents.yaml")
     agents = config["agents"]
     agents["quant_scout"]["skills"]["reproducibility_triage"]["enabled"] = True
-    for name in ("pdf_acquisition", "method_spec_extraction", "target_table_extraction"):
+    agents["quant_scout"]["skills"]["charter_relevance"]["enabled"] = True
+    for name in ("pdf_acquisition", "method_spec_extraction", "target_table_extraction", "red_flag_scan"):
         agents["quant_reader"]["skills"][name]["enabled"] = True
     agents["quant_coder"]["skills"]["code_generation"]["enabled"] = True
     agents["quant_bench"]["skills"]["dataset_registry"]["enabled"] = True

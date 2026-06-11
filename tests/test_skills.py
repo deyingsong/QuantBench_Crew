@@ -152,11 +152,14 @@ def test_shipped_config_resolves_no_skills() -> None:
 
 def test_workstream_b_skills_are_registered() -> None:
     assert "reproducibility_triage" in default_registry.names("quant_scout")
-    assert default_registry.names("quant_reader") == (
-        "method_spec_extraction",
-        "pdf_acquisition",
-        "target_table_extraction",
+    assert {"method_spec_extraction", "pdf_acquisition", "target_table_extraction"} <= set(
+        default_registry.names("quant_reader")
     )
+
+
+def test_workstream_f_skills_are_registered() -> None:
+    assert "charter_relevance" in default_registry.names("quant_scout")
+    assert "red_flag_scan" in default_registry.names("quant_reader")
 
 
 def test_agents_accept_and_store_skills() -> None:

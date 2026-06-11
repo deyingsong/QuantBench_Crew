@@ -9,18 +9,24 @@ records so the dry workflow always runs.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
+import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import date
 from pathlib import Path
 
 from quantbench_crew.models import Paper
 
 ARXIV_API_URL = "https://export.arxiv.org/api/query"
+
+DEFAULT_PROCESSED_PATH = Path("data/processed/seen_papers.json")
+ARXIV_PAGE_SIZE = 100
+ARXIV_POLITE_DELAY = 3.0   # arXiv asks for ~3s between requests
 
 # Explicit q-fin subcategories (the arXiv API has no reliable cat wildcard).
 QFIN_CATEGORIES = (
@@ -56,26 +62,65 @@ def load_local_papers(path: str | Path | None = None) -> list[Paper]:
 
 
 def search_arxiv(
-    query: str, max_results: int = 5, fetcher: Fetcher | None = None
+    query: str,
+    max_results: int = 5,
+    fetcher: Fetcher | None = None,
+    *,
+    page_size: int = ARXIV_PAGE_SIZE,
+    delay: float = ARXIV_POLITE_DELAY,
+    start_date: date | None = None,
+    end_date: date | None = None,
 ) -> list[Paper]:
-    """Search live arXiv q-fin categories; fall back to offline placeholders.
+    """Search live arXiv q-fin categories, paginating up to ``max_results``.
 
-    An empty live result list is returned as-is (a legitimate answer); the
-    placeholder fallback engages only when the API cannot be reached or its
-    response cannot be parsed.
+    Fetches pages of ``page_size`` until enough results accrue or the feed is
+    exhausted, deduplicating entries within the result set, with a polite
+    inter-page ``delay`` and retry-with-backoff on transient errors. An
+    optional ``start_date``/``end_date`` window supports incremental fetches.
+    If the *first* page cannot be reached the offline placeholder records are
+    returned; a later-page failure returns the results gathered so far.
     """
 
-    url = _arxiv_query_url(query, max_results)
-    try:
-        payload = (fetcher or _http_get)(url)
-        papers = _parse_arxiv_feed(payload.decode("utf-8"))
-    except (OSError, ValueError, ET.ParseError) as exc:
-        print(
-            f"warning: live arXiv search failed ({exc!r}); "
-            "using deterministic offline placeholder records",
-            file=sys.stderr,
+    fetch = fetcher or _http_get
+    page_size = max(1, min(page_size, max_results))
+    papers: list[Paper] = []
+    seen: set[str] = set()
+    start = 0
+
+    while len(papers) < max_results:
+        url = _arxiv_query_url(
+            query, start=start, page_size=page_size,
+            start_date=start_date, end_date=end_date,
         )
-        return placeholder_arxiv_papers(query, max_results)
+        try:
+            payload = _fetch_with_retry(fetch, url, delay=delay if start else 0.0)
+            page = _parse_arxiv_feed(payload.decode("utf-8"))
+        except (OSError, ValueError, ET.ParseError) as exc:
+            if not papers:
+                print(
+                    f"warning: live arXiv search failed ({exc!r}); "
+                    "using deterministic offline placeholder records",
+                    file=sys.stderr,
+                )
+                return placeholder_arxiv_papers(query, max_results)
+            print(f"warning: arXiv page fetch failed ({exc!r}); returning partial results", file=sys.stderr)
+            break
+
+        if not page:
+            break
+        added = 0
+        for paper in page:
+            key = _dedup_key(paper)
+            if key not in seen:
+                seen.add(key)
+                papers.append(paper)
+                added += 1
+        # A full page that contributed nothing new means the feed is only
+        # repeating content; stop rather than paginate forever.
+        if len(page) < page_size or added == 0:
+            break
+        start += page_size
+
     return papers[:max_results]
 
 
@@ -178,20 +223,102 @@ def placeholder_arxiv_papers(query: str, max_results: int = 5) -> list[Paper]:
     ]
 
 
-def _arxiv_query_url(query: str, max_results: int) -> str:
+def _arxiv_query_url(
+    query: str,
+    start: int = 0,
+    page_size: int = ARXIV_PAGE_SIZE,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> str:
     categories = " OR ".join(f"cat:{category}" for category in QFIN_CATEGORIES)
-    search_query = f"({categories}) AND all:{query}"
+    parts = [f"({categories})"]
+    if query:
+        parts.append(f"all:{query}")
+    if start_date is not None or end_date is not None:
+        low = f"{start_date:%Y%m%d}0000" if start_date else "190001010000"
+        high = f"{end_date:%Y%m%d}2359" if end_date else f"{date.today():%Y%m%d}2359"
+        parts.append(f"submittedDate:[{low} TO {high}]")
+    search_query = " AND ".join(parts)
     params = urllib.parse.urlencode(
         {
             "search_query": search_query,
-            "start": 0,
-            "max_results": max_results,
+            "start": start,
+            "max_results": page_size,
             "sortBy": "submittedDate",
             "sortOrder": "descending",
         },
         quote_via=urllib.parse.quote,
     )
     return f"{ARXIV_API_URL}?{params}"
+
+
+def _fetch_with_retry(
+    fetch: Fetcher, url: str, *, retries: int = 3, delay: float = 0.0
+) -> bytes:
+    """Fetch with polite pre-delay and exponential backoff on OSError."""
+
+    if delay:
+        time.sleep(delay)
+    last_error: OSError | None = None
+    for attempt in range(retries):
+        try:
+            return fetch(url)
+        except OSError as exc:
+            last_error = exc
+            if attempt < retries - 1:
+                time.sleep(min(2.0**attempt, 30.0))
+    raise last_error if last_error is not None else OSError("fetch failed")
+
+
+def _dedup_key(paper: Paper) -> str:
+    arxiv_id = str(paper.raw.get("arxiv_id") or "").strip()
+    if arxiv_id:
+        return f"arxiv:{arxiv_id}"
+    return f"title:{_title_hash(paper.title)}"
+
+
+def _title_hash(title: str) -> str:
+    normalized = " ".join(title.lower().split())
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
+
+
+class ProcessedRegistry:
+    """Persistent set of already-processed papers for cross-run dedup.
+
+    Keyed by both arXiv id and a normalized-title hash, so a paper is skipped
+    on re-ingestion whether or not it carries an arXiv id. The backing JSON
+    file is the durable watermark that makes incremental fetching idempotent.
+    """
+
+    def __init__(self, path: str | Path = DEFAULT_PROCESSED_PATH) -> None:
+        self.path = Path(path)
+        self._keys: set[str] = set()
+        if self.path.exists():
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+            self._keys = set(data.get("keys", []))
+
+    @staticmethod
+    def _keys_for(paper: Paper) -> tuple[str, ...]:
+        keys = [f"title:{_title_hash(paper.title)}"]
+        arxiv_id = str(paper.raw.get("arxiv_id") or "").strip()
+        if arxiv_id:
+            keys.append(f"arxiv:{arxiv_id}")
+        return tuple(keys)
+
+    def is_seen(self, paper: Paper) -> bool:
+        return any(key in self._keys for key in self._keys_for(paper))
+
+    def mark(self, paper: Paper) -> None:
+        self._keys.update(self._keys_for(paper))
+
+    def filter_unseen(self, papers: Iterable[Paper]) -> list[Paper]:
+        return [paper for paper in papers if not self.is_seen(paper)]
+
+    def save(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(
+            json.dumps({"keys": sorted(self._keys)}, indent=2) + "\n", encoding="utf-8"
+        )
 
 
 def _parse_arxiv_feed(xml_text: str) -> list[Paper]:

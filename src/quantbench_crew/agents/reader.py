@@ -10,6 +10,7 @@ from typing import Any, Protocol
 from quantbench_crew.models import Paper, PaperAnalysis
 from quantbench_crew.skills.base import RunContext, Skill
 from quantbench_crew.skills.reader.method_spec import method_spec_from_payload
+from quantbench_crew.skills.reader.red_flag import red_flags_from_payload
 from quantbench_crew.skills.reader.target_table import reproduction_target_from_payload
 from quantbench_crew.skills.validation import extract_json_object
 from quantbench_crew.tools.paper_parser import keyword_extract, sentence_summary
@@ -88,7 +89,9 @@ class QuantReaderAgent:
         )
 
         if ctx is not None:
-            analysis = self._extract_structured(analysis, ctx)
+            # The PaperQA2 answer is the full-text signal; absent it the
+            # extraction skills fall back to the abstract.
+            analysis = self._extract_structured(analysis, ctx, full_text=paperqa_answer or "")
         return analysis
 
     def _acquire_documents(self, paper: Paper, ctx: RunContext) -> Paper:
@@ -103,12 +106,14 @@ class QuantReaderAgent:
             return replace(paper, raw={**paper.raw, "pdf_path": pdf_path})
         return paper
 
-    def _extract_structured(self, analysis: PaperAnalysis, ctx: RunContext) -> PaperAnalysis:
-        """Attach MethodSpec and ReproductionTarget from extraction skills."""
+    def _extract_structured(
+        self, analysis: PaperAnalysis, ctx: RunContext, full_text: str = ""
+    ) -> PaperAnalysis:
+        """Attach MethodSpec, ReproductionTarget, and red flags from skills."""
 
         spec_skill = self.skills.get("method_spec_extraction")
         if spec_skill is not None:
-            result = spec_skill.run(ctx, analysis=analysis)
+            result = spec_skill.run(ctx, analysis=analysis, full_text=full_text)
             spec = method_spec_from_payload(analysis.paper, result.payload)
             if spec is not None:
                 analysis = replace(analysis, method_spec=spec)
@@ -119,6 +124,11 @@ class QuantReaderAgent:
             target = reproduction_target_from_payload(analysis.paper, result.payload)
             if target is not None:
                 analysis = replace(analysis, reproduction_target=target)
+
+        red_flag_skill = self.skills.get("red_flag_scan")
+        if red_flag_skill is not None:
+            result = red_flag_skill.run(ctx, analysis=analysis, full_text=full_text)
+            analysis = replace(analysis, red_flags=red_flags_from_payload(result.payload))
         return analysis
 
 

@@ -1,0 +1,10 @@
+{
+  "universe": "NYSE and AMEX common stocks",
+  "frequency": "monthly",
+  "signal_definition": "ranking on past 6-month returns",
+  "portfolio_construction": "equal-weighted winner-minus-loser decile",
+  "rebalance_frequency": "monthly",
+  "holding_period": "6 months, overlapping",
+  "sample_start": "1965-01-01",
+  "sample_end": "1989-12-31"
+}
