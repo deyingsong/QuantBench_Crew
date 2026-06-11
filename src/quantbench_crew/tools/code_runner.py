@@ -58,6 +58,17 @@ DEFAULT_ALLOWED_IMPORTS = frozenset(
     }
 )
 
+# Opt-in numerical tier (QB-30) for *generated ML strategies only*. This
+# widens the attack surface — numpy/pandas can touch the filesystem (e.g.
+# numpy.fromfile, pandas.read_csv) — so it is never the default. The isolated
+# subprocess, scrubbed environment, RLIMIT_FSIZE/CPU/AS caps, and the absence
+# of os/sys/subprocess/socket from the allowlist remain the actual boundary;
+# the import allowlist is defense-in-depth, not the boundary. Reviewed via
+# /ecc:security-review. Keep this set pinned and minimal.
+NUMERIC_ALLOWED_IMPORTS = DEFAULT_ALLOWED_IMPORTS | frozenset(
+    {"numpy", "pandas", "sklearn", "scipy"}
+)
+
 BANNED_CALLS = frozenset(
     {
         "breakpoint",

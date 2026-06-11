@@ -147,6 +147,25 @@ def _run_template_checks():
     except Exception as exc:
         failures.append("no_lookahead: raised " + repr(exc))
 
+    # spec-derived construction invariants (QB-29): each from a trusted
+    # vocabulary, applied to the already-computed weights.
+    nonzero = [v for v in weights.values() if abs(v) > 1e-12]
+    for invariant in _json.loads('__INVARIANTS_JSON__'):
+        kind = invariant["kind"]
+        try:
+            if kind == "zero_net":
+                if abs(sum(weights.values())) > 1e-6:
+                    failures.append("zero_net: long-short weights do not sum to ~0")
+            elif kind == "uniform_magnitude":
+                mags = sorted(abs(v) for v in nonzero)
+                if mags and (mags[-1] - mags[0]) > 1e-6:
+                    failures.append("uniform_magnitude: equal-weight legs are not uniform")
+            elif kind == "leveraged_bound":
+                if sum(abs(v) for v in weights.values()) > 2.0 + 1e-6:
+                    failures.append("leveraged_bound: gross exposure exceeds 2x")
+        except Exception as exc:
+            failures.append(kind + ": raised " + repr(exc))
+
     failed_checks = {failure.split(":")[0] for failure in failures}
     print(
         _json.dumps(
@@ -175,17 +194,51 @@ def template_params(spec: MethodSpec | None) -> dict[str, Any]:
     }
 
 
+_LONG_SHORT_MARKERS = (
+    "long-short", "long short", "winner-minus-loser", "winners-minus-losers", "wml",
+)
+_EQUAL_WEIGHT_MARKERS = ("equal-weight", "equal weight", "equally weighted", "equally-weighted")
+
+
+def spec_invariants(spec: MethodSpec | None) -> list[dict[str, Any]]:
+    """Construction-aware invariants implied by the MethodSpec (QB-29).
+
+    Derived from a trusted vocabulary rather than emitted as code, so nothing
+    untrusted enters the harness: the LLM (or the deterministic parser) only
+    selects *which* known invariants apply, never writes the assertion.
+    """
+
+    if spec is None:
+        return []
+    text = (spec.portfolio_construction or "").lower()
+    invariants: list[dict[str, Any]] = []
+    if any(marker in text for marker in _LONG_SHORT_MARKERS):
+        invariants.append({"kind": "zero_net"})
+    if any(marker in text for marker in _EQUAL_WEIGHT_MARKERS):
+        invariants.append({"kind": "uniform_magnitude"})
+    invariants.append({"kind": "leveraged_bound"})  # always: sanity cap on gross exposure
+    return invariants
+
+
+def template_test_count(spec: MethodSpec | None) -> int:
+    """Total checks the harness runs for this spec (templates + invariants)."""
+
+    return TEMPLATE_TEST_COUNT + len(spec_invariants(spec))
+
+
 def compose_test_script(candidate_source: str, spec: MethodSpec | None) -> str:
     """One sandbox-runnable script: candidate module + template harness."""
 
     params = template_params(spec)
+    invariants = spec_invariants(spec)
     # Enough history for formation + skip plus a comfortable margin.
     periods = max(24, 2 * (params["formation_periods"] + params["skip_periods"]) + 6)
     harness = (
         _HARNESS.replace("__PERIODS__", str(periods))
         .replace("__N_ASSETS__", "10")
         .replace("__PARAMS_JSON__", json.dumps(params))
-        .replace("__TOTAL__", str(TEMPLATE_TEST_COUNT))
+        .replace("__INVARIANTS_JSON__", json.dumps(invariants))
+        .replace("__TOTAL__", str(TEMPLATE_TEST_COUNT + len(invariants)))
     )
     return candidate_source.rstrip() + "\n" + harness
 

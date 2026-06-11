@@ -33,11 +33,12 @@ from quantbench_crew.models import MethodSpec, PaperAnalysis
 from quantbench_crew.prompts import load_prompt
 from quantbench_crew.skills import register_skill
 from quantbench_crew.skills.base import RunContext, SkillResult, skill_settings
+from quantbench_crew.skills.coder.agent_adapter import resolve_agent_backend
 from quantbench_crew.skills.coder.templates import (
-    TEMPLATE_TEST_COUNT,
     compose_test_script,
     parse_template_result,
     template_params,
+    template_test_count,
 )
 from quantbench_crew.tools.code_runner import check_code, run_sandboxed
 
@@ -140,10 +141,9 @@ class CodeGenerationSkill:
         settings = skill_settings(ctx.config, "quant_coder", self.name)
         iterations = int(settings.get("iterations", DEFAULT_ITERATIONS))
         adapter = str(settings.get("adapter", "complete"))
-        if adapter != "complete":
+        if adapter not in ("complete", "agent"):
             raise ValueError(
-                f"generation adapter {adapter!r} is not implemented yet; "
-                "only 'complete' (single-shot LLM emission) is available"
+                f"unknown generation adapter {adapter!r}; expected 'complete' or 'agent'"
             )
         llm_config = ctx.config.get("llm") or {}
         cost_cap = float(llm_config.get("cost_cap_usd", DEFAULT_COST_CAP_USD))
@@ -151,6 +151,27 @@ class CodeGenerationSkill:
         notes: list[str] = []
         if spec is None:
             notes.append("no MethodSpec on analysis; generating from analysis fields")
+
+        # Resolve the source generator. The agent adapter swaps the generator
+        # for a headless Claude backend; the ERA search and sandbox oracle are
+        # unchanged. An unavailable agent backend falls back to single-shot.
+        agent_backend = None
+        if adapter == "agent":
+            agent_backend = inputs.get("agent_backend") or resolve_agent_backend(settings)
+            if not agent_backend.available():
+                notes.append(
+                    f"agent backend {agent_backend.name!r} unavailable; "
+                    "falling back to single-shot complete"
+                )
+                agent_backend = None
+                adapter = "complete"
+
+        def generate_source(prompt: str, feedback: str) -> str | None:
+            if agent_backend is not None:
+                return agent_backend.generate(prompt, SYSTEM_PROMPT, feedback)
+            if ctx.llm is not None:
+                return ctx.llm.complete(prompt, system=SYSTEM_PROMPT).text
+            return None
 
         evaluations: dict[str, dict[str, Any]] = {}
 
@@ -166,13 +187,15 @@ class CodeGenerationSkill:
         initial_score = execute_fn(era.Problem(""), initial)
 
         best_solution, best_score = initial, initial_score
-        llm_iterations = 0
-        if ctx.llm is None:
-            notes.append("no LLM configured; deterministic fallback candidate only")
+        gen_iterations = 0
+        can_generate = agent_backend is not None or ctx.llm is not None
+        if not can_generate:
+            notes.append("no generator configured; deterministic fallback candidate only")
         elif iterations > 0:
             problem = era.Problem(
                 description=json.dumps(
-                    {"paper": analysis.paper.title, "spec": spec is not None},
+                    {"paper": analysis.paper.title, "spec": spec is not None,
+                     "adapter": "agent" if agent_backend else "complete"},
                     sort_keys=True,
                 )
             )
@@ -182,11 +205,14 @@ class CodeGenerationSkill:
                 parent_solution: era.Solution,
                 parent_score: float,
             ) -> era.Solution:
-                nonlocal llm_iterations
+                nonlocal gen_iterations
+                # The complete path's spend is tracked in the manifest; the
+                # agent path is bounded by the iteration budget (capturing
+                # headless-claude cost into the manifest is a follow-up).
                 spent = sum(
                     float(call.get("cost_usd", 0.0)) for call in ctx.manifest.llm_calls
                 )
-                if spent >= cost_cap:
+                if agent_backend is None and spent >= cost_cap:
                     if not any("cost cap" in note for note in notes):
                         notes.append(
                             f"per-paper cost cap reached (${spent:.4f} >= "
@@ -206,14 +232,14 @@ class CodeGenerationSkill:
                     )
                 prompt = build_generation_prompt(spec, analysis, feedback)
                 try:
-                    response = ctx.llm.complete(prompt, system=SYSTEM_PROMPT)
+                    text = generate_source(prompt, feedback)
                 except Exception as exc:  # boundary: keep searching from parent
                     notes.append(f"generation call failed: {exc!r}")
                     return parent_solution
-                llm_iterations += 1
-                source = extract_module_source(response.text)
+                gen_iterations += 1
+                source = extract_module_source(text or "")
                 if not source:
-                    notes.append("completion contained no usable module source")
+                    notes.append("generation produced no usable module source")
                     return parent_solution
                 return era.Solution(source)
 
@@ -263,9 +289,9 @@ class CodeGenerationSkill:
                 "tests_total": best_info["tests_total"],
                 "failures": best_info["failures"],
                 "params": template_params(spec),
-                "source": "fallback" if used_fallback else "llm",
+                "source": "fallback" if used_fallback else ("agent" if agent_backend else "llm"),
                 "candidates_evaluated": len(evaluations),
-                "llm_iterations": llm_iterations,
+                "llm_iterations": gen_iterations,
             },
             artifacts=(code_path, "generated/template_tests.py", "generated/candidates.json"),
             notes=tuple(notes),
@@ -276,12 +302,13 @@ class CodeGenerationSkill:
     def _evaluate(self, source: str, spec: MethodSpec | None) -> dict[str, Any]:
         """Score one candidate: template tests passed + structure prior."""
 
+        total = template_test_count(spec)
         violations = check_code(source)
         if violations:
             return {
                 "score": 0.0,
                 "tests_passed": 0,
-                "tests_total": TEMPLATE_TEST_COUNT,
+                "tests_total": total,
                 "failures": [f"static: {violation}" for violation in violations],
                 "sandbox_status": "blocked",
             }
@@ -295,7 +322,7 @@ class CodeGenerationSkill:
             return {
                 "score": 0.0,
                 "tests_passed": 0,
-                "tests_total": TEMPLATE_TEST_COUNT,
+                "tests_total": total,
                 "failures": [failure],
                 "sandbox_status": sandbox.status,
             }

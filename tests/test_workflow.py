@@ -203,7 +203,7 @@ def test_golden_paper_flows_through_enabled_skills(tmp_path: Path) -> None:
         if entry["skill"] == "code_generation"
     )
     assert codegen["status"] == "ok"
-    assert codegen["payload"]["tests_passed"] == 3
+    assert codegen["payload"]["tests_passed"] == codegen["payload"]["tests_total"] >= 3
     assert "generated/strategy.py" in manifest["artifacts"]
 
     # Bench: the planted-momentum world beats the random null and the golden

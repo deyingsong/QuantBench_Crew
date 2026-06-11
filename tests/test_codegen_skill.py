@@ -50,12 +50,13 @@ def test_fallback_candidate_passes_all_template_tests(make_ctx) -> None:
 
     assert result.status == "ok"
     payload = result.payload
-    assert payload["tests_passed"] == payload["tests_total"] == 3
+    # Templates (3) plus the golden spec's construction invariants (QB-29).
+    assert payload["tests_passed"] == payload["tests_total"] >= 3
     assert payload["source"] == "fallback"
     assert payload["entry_point"] == "build_strategy"
     assert (ctx.run_dir / "generated" / "strategy.py").exists()
     assert "generated/strategy.py" in ctx.manifest.artifacts
-    assert any("no LLM configured" in note for note in result.notes)
+    assert any("no generator configured" in note for note in result.notes)
 
 
 def test_llm_candidates_are_generated_and_scored(make_ctx) -> None:
@@ -123,10 +124,10 @@ def test_unusable_llm_output_keeps_fallback(make_ctx) -> None:
 
 def test_unknown_adapter_is_rejected_loudly(make_ctx) -> None:
     config = _codegen_config()
-    config["agents"]["quant_coder"]["skills"]["code_generation"]["adapter"] = "agent"
+    config["agents"]["quant_coder"]["skills"]["code_generation"]["adapter"] = "bogus"
     ctx = make_ctx(config=config)
 
-    with pytest.raises(ValueError, match="not implemented yet"):
+    with pytest.raises(ValueError, match="unknown generation adapter"):
         CodeGenerationSkill().run(ctx, analysis=_golden_analysis(), plan=None)
 
 
