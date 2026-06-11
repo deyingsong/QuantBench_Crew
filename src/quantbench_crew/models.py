@@ -198,6 +198,9 @@ class ReviewReport:
                 "## Benchmark Metrics",
                 _metric_table(self.benchmark_result.metrics),
                 "",
+                "## Rubric",
+                _rubric_table(self.rubric),
+                "",
                 "## Strengths",
                 _bullet_list(self.strengths),
                 "",
@@ -226,4 +229,15 @@ def _metric_table(metrics: dict[str, float]) -> str:
 
     rows = ["| Metric | Value |", "| --- | ---: |"]
     rows.extend(f"| {name} | {value:.4f} |" for name, value in metrics.items())
+    return "\n".join(rows)
+
+
+def _rubric_table(rubric: tuple["RubricScore", ...]) -> str:
+    if not rubric:
+        return "No rubric scored (scaffold-only run)."
+
+    rows = ["| Dimension | Score | Rationale | Evidence |", "| --- | ---: | --- | --- |"]
+    for score in rubric:
+        evidence = "; ".join(link.reference for link in score.evidence) or "—"
+        rows.append(f"| {score.dimension} | {score.score}/4 | {score.rationale} | {evidence} |")
     return "\n".join(rows)

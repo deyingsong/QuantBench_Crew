@@ -166,4 +166,5 @@ from quantbench_crew.skills.coder import code_generation as _coder_code_generati
 from quantbench_crew.skills.reader import method_spec as _reader_method_spec  # noqa: E402,F401
 from quantbench_crew.skills.reader import pdf_acquisition as _reader_pdf_acquisition  # noqa: E402,F401
 from quantbench_crew.skills.reader import target_table as _reader_target_table  # noqa: E402,F401
+from quantbench_crew.skills.reviewer import rubric as _reviewer_rubric  # noqa: E402,F401
 from quantbench_crew.skills.scout import triage as _scout_triage  # noqa: E402,F401

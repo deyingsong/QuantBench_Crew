@@ -141,7 +141,9 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         benchmark_result = bench.evaluate(
             implementation_plan, analysis=analysis, ctx=ctx
         )
-        report = reviewer.review(analysis, implementation_plan, benchmark_result)
+        report = reviewer.review(
+            analysis, implementation_plan, benchmark_result, ctx=ctx
+        )
         reports.append(report)
 
         if manifest is not None and store is not None:

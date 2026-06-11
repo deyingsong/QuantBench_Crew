@@ -46,3 +46,6 @@ quantbench_crew = ["prompts/*.txt"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+  "e2e: full-pipeline golden-paper and synthetic-noise-gate tests",
+]

@@ -137,6 +137,7 @@ def _skills_enabled_config(tmp_path: Path) -> str:
     agents["quant_coder"]["skills"]["code_generation"]["enabled"] = True
     agents["quant_bench"]["skills"]["dataset_registry"]["enabled"] = True
     agents["quant_bench"]["skills"]["walk_forward"]["enabled"] = True
+    agents["quant_reviewer"]["skills"]["rubric_verdict"]["enabled"] = True
     path = tmp_path / "agents-skills.yaml"
     path.write_text(yaml.safe_dump(config), encoding="utf-8")
     return str(path)
@@ -178,6 +179,7 @@ def test_golden_paper_flows_through_enabled_skills(tmp_path: Path) -> None:
         "code_generation",
         "dataset_registry",
         "walk_forward",
+        "rubric_verdict",
     }
     triage = next(
         entry for entry in manifest["skill_results"]
@@ -203,6 +205,19 @@ def test_golden_paper_flows_through_enabled_skills(tmp_path: Path) -> None:
     benchmark = reports[0].benchmark_result
     assert benchmark.dataset == "planted_momentum"
     assert len(benchmark.comparisons) == 1
+
+    # Reviewer: a real, evidence-cited rubric — not the placeholder verdict.
+    report = reports[0]
+    assert report.verdict != "scaffold-only"
+    assert {score.dimension for score in report.rubric} == {
+        "reproducibility",
+        "robustness",
+        "net_of_cost_viability",
+        "novelty_vs_baselines",
+        "data_accessibility",
+    }
+    assert all(score.evidence for score in report.rubric if score.score > 0)
+    assert "## Rubric" in report.to_markdown()
 
 
 def test_low_feasibility_paper_is_gated_but_audited(tmp_path: Path) -> None:
