@@ -130,6 +130,9 @@ def _skills_enabled_config(tmp_path: Path) -> str:
     """Shipped config with the Workstream B and C skills toggled on."""
 
     config = load_config("configs/agents.yaml")
+    # Pin offline: the shipped default is per-agent live backbones, which
+    # must never place network calls from tests even when keys are exported.
+    config["llm"]["provider"] = "none"
     agents = config["agents"]
     agents["quant_scout"]["skills"]["reproducibility_triage"]["enabled"] = True
     agents["quant_scout"]["skills"]["charter_relevance"]["enabled"] = True

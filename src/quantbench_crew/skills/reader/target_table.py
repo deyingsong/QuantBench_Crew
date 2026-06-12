@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from quantbench_crew.llm import llm_for_agent
 from quantbench_crew.models import Claim, Paper, ReproductionTarget
 from quantbench_crew.prompts import load_prompt
 from quantbench_crew.skills import register_skill
@@ -93,12 +94,16 @@ class TargetTableExtractionSkill:
         target_payload: dict[str, Any] | None = None
         source = "abstract_fallback"
 
-        if ctx.llm is None:
-            notes.append("no LLM configured; using deterministic abstract fallback")
+        client = llm_for_agent(ctx.llm, "quant_reader")
+        if client is None:
+            notes.append(
+                "no LLM configured for quant_reader; using deterministic "
+                "abstract fallback"
+            )
         else:
             prompt = build_target_table_prompt(paper)
             try:
-                response = ctx.llm.complete(prompt, system=SYSTEM_PROMPT)
+                response = client.complete(prompt, system=SYSTEM_PROMPT)
                 candidate = extract_json_object(response.text)
                 errors = validate(candidate, TARGET_SCHEMA)
                 if errors:

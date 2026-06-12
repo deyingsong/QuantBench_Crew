@@ -33,6 +33,7 @@ from quantbench_crew.models import MethodSpec, PaperAnalysis
 from quantbench_crew.prompts import load_prompt
 from quantbench_crew.skills import register_skill
 from quantbench_crew.skills.base import RunContext, SkillResult, skill_settings
+from quantbench_crew.llm import llm_for_agent
 from quantbench_crew.skills.coder.agent_adapter import resolve_agent_backend
 from quantbench_crew.skills.coder.templates import (
     compose_test_script,
@@ -154,7 +155,9 @@ class CodeGenerationSkill:
 
         # Resolve the source generator. The agent adapter swaps the generator
         # for a headless Claude backend; the ERA search and sandbox oracle are
-        # unchanged. An unavailable agent backend falls back to single-shot.
+        # unchanged. An unavailable agent backend falls back to single-shot
+        # through the coder's own LLM backbone.
+        coder_llm = llm_for_agent(ctx.llm, "quant_coder")
         agent_backend = None
         if adapter == "agent":
             agent_backend = inputs.get("agent_backend") or resolve_agent_backend(settings)
@@ -169,8 +172,8 @@ class CodeGenerationSkill:
         def generate_source(prompt: str, feedback: str) -> str | None:
             if agent_backend is not None:
                 return agent_backend.generate(prompt, SYSTEM_PROMPT, feedback)
-            if ctx.llm is not None:
-                return ctx.llm.complete(prompt, system=SYSTEM_PROMPT).text
+            if coder_llm is not None:
+                return coder_llm.complete(prompt, system=SYSTEM_PROMPT).text
             return None
 
         evaluations: dict[str, dict[str, Any]] = {}
@@ -188,9 +191,12 @@ class CodeGenerationSkill:
 
         best_solution, best_score = initial, initial_score
         gen_iterations = 0
-        can_generate = agent_backend is not None or ctx.llm is not None
+        can_generate = agent_backend is not None or coder_llm is not None
         if not can_generate:
-            notes.append("no generator configured; deterministic fallback candidate only")
+            notes.append(
+                "no LLM configured for quant_coder and no agent backend; "
+                "deterministic fallback candidate only"
+            )
         elif iterations > 0:
             problem = era.Problem(
                 description=json.dumps(

@@ -24,6 +24,9 @@ GOLDEN = str(FIXTURES / "golden_paper.json")
 
 def _config(tmp_path: Path, dataset: str, params: dict) -> str:
     config = load_config("configs/agents.yaml")
+    # Pin offline: the shipped default is per-agent live backbones, which
+    # must never place network calls from tests even when keys are exported.
+    config["llm"]["provider"] = "none"
     agents = config["agents"]
     agents["quant_scout"]["skills"]["reproducibility_triage"]["enabled"] = True
     agents["quant_scout"]["skills"]["charter_relevance"]["enabled"] = True

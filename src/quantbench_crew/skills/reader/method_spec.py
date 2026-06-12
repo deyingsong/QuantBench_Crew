@@ -15,6 +15,7 @@ import re
 from datetime import date
 from typing import Any
 
+from quantbench_crew.llm import llm_for_agent
 from quantbench_crew.models import EvidenceLink, MethodSpec, Paper, PaperAnalysis
 from quantbench_crew.prompts import load_prompt
 from quantbench_crew.skills import register_skill
@@ -151,12 +152,16 @@ class MethodSpecExtractionSkill:
         source = "metadata_fallback"
         evidence: list[dict[str, str]] = []
 
-        if ctx.llm is None:
-            notes.append("no LLM configured; using deterministic metadata fallback")
+        client = llm_for_agent(ctx.llm, "quant_reader")
+        if client is None:
+            notes.append(
+                "no LLM configured for quant_reader; using deterministic "
+                "metadata fallback"
+            )
         else:
             prompt = build_method_spec_prompt(analysis, full_text)
             try:
-                response = ctx.llm.complete(prompt, system=SYSTEM_PROMPT)
+                response = client.complete(prompt, system=SYSTEM_PROMPT)
                 candidate = extract_json_object(response.text)
                 errors = validate(candidate, METHOD_SPEC_SCHEMA)
                 if errors:

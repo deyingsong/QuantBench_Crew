@@ -6,16 +6,33 @@ model, token counts, and estimated cost — the manifest logs fingerprints and
 sizes rather than raw prompt text, so manifests stay shareable and
 deterministic while spend remains auditable per paper run.
 
+Five providers are supported: ``anthropic`` (Claude, via the official SDK),
+and ``openai`` (GPT), ``gemini``, ``grok`` (xAI), ``deepseek`` — the latter
+four through one stdlib HTTP adapter for the OpenAI-compatible chat API each
+of them serves, so no extra packages are required. Each provider's "port" is
+an API-key environment variable (overridable per agent via ``api_key_env``)
+plus an overridable ``base_url``.
+
 Configured via the top-level ``llm:`` section of ``configs/agents.yaml``:
 
 .. code-block:: yaml
 
     llm:
-      provider: none        # none | stub | anthropic
-      model: claude-opus-4-8
-      max_tokens: 4096
+      provider: per-agent   # none | stub | per-agent | <single provider>
+      model: claude-opus-4-8                       # single-provider default
       fixtures: tests/fixtures/llm_fixtures.json   # stub provider only
+      cost_cap_usd: 2.0
+      agents:                                      # provider: per-agent
+        quant_scout:    {provider: grok,      model: grok-4}
+        quant_reader:   {provider: gemini,    model: gemini-2.5-pro}
+        quant_coder:    {provider: anthropic, model: claude-opus-4-8}
+        quant_bench:    {provider: deepseek,  model: deepseek-chat}
+        quant_reviewer: {provider: openai,    model: gpt-5}
 
+Fallback contract: backbones are checked at build time (key present, SDK
+importable) and every live call is wrapped in skill-level try/except — when an
+agent's backbone is missing or errors, *that agent alone* downgrades to its
+deterministic offline fallback and the reason lands in the manifest.
 ``provider: none`` keeps the dry workflow free of any LLM dependency.
 """
 
@@ -23,9 +40,10 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Mapping, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Protocol, runtime_checkable
 
 from quantbench_crew.artifacts import stable_hash
 
@@ -34,6 +52,51 @@ if TYPE_CHECKING:
 
 DEFAULT_MODEL = "claude-opus-4-8"
 DEFAULT_MAX_TOKENS = 4096
+DEFAULT_HTTP_TIMEOUT = 120.0
+
+AGENT_NAMES = (
+    "quant_scout",
+    "quant_reader",
+    "quant_coder",
+    "quant_bench",
+    "quant_reviewer",
+)
+
+# Per-provider ports: where requests go and which env var supplies the key.
+# ``model`` is only the default; configs override per agent. The four
+# OpenAI-compatible providers share one adapter; anthropic uses its SDK.
+PROVIDER_DEFAULTS: dict[str, dict[str, Any]] = {
+    "openai": {
+        "base_url": "https://api.openai.com/v1",
+        "api_key_env": "OPENAI_API_KEY",
+        "model": "gpt-5",
+    },
+    "gemini": {
+        # Google's OpenAI-compatible endpoint for the Gemini API.
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "api_key_env": "GEMINI_API_KEY",
+        "extra_key_envs": ("GOOGLE_API_KEY",),
+        "model": "gemini-2.5-pro",
+    },
+    "grok": {
+        "base_url": "https://api.x.ai/v1",
+        "api_key_env": "XAI_API_KEY",
+        "extra_key_envs": ("GROK_API_KEY",),
+        "model": "grok-4",
+    },
+    "deepseek": {
+        "base_url": "https://api.deepseek.com/v1",
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "model": "deepseek-chat",
+    },
+    "anthropic": {
+        "api_key_env": "ANTHROPIC_API_KEY",
+        "model": DEFAULT_MODEL,
+    },
+}
+
+# Friendly names accepted in configs.
+PROVIDER_ALIASES = {"gpt": "openai", "claude": "anthropic", "xai": "grok", "google": "gemini"}
 
 # USD per million input/output tokens (cached from the Claude model catalog,
 # 2026-05-26). Unknown models price at 0.0 so cost totals stay conservative
@@ -225,6 +288,120 @@ class AnthropicClient:
         )
 
 
+Transport = Callable[[str, dict[str, str], dict[str, Any]], dict[str, Any]]
+
+
+def _http_post_json(
+    url: str, headers: dict[str, str], payload: dict[str, Any],
+    timeout: float = DEFAULT_HTTP_TIMEOUT,
+) -> dict[str, Any]:
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json", **headers},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+class OpenAICompatibleClient:
+    """One stdlib adapter for every provider serving the OpenAI chat API.
+
+    Covers GPT (api.openai.com), Gemini (Google's OpenAI-compatibility
+    endpoint), Grok (api.x.ai), and DeepSeek — same request/response shape,
+    different base URL and key. ``transport`` is injectable so tests exercise
+    the adapter offline; network errors surface as ``OSError`` and are caught
+    at the skill boundary, which is what triggers the per-agent offline
+    fallback.
+    """
+
+    def __init__(
+        self,
+        provider: str,
+        model: str,
+        *,
+        base_url: str | None = None,
+        api_key: str | None = None,
+        api_key_env: str | None = None,
+        price_per_mtok: tuple[float, float] | None = None,
+        timeout: float = DEFAULT_HTTP_TIMEOUT,
+        transport: Transport | None = None,
+    ) -> None:
+        defaults = PROVIDER_DEFAULTS.get(provider, {})
+        self.name = provider
+        self._model = model
+        self._base_url = (base_url or defaults.get("base_url", "")).rstrip("/")
+        self._api_key = api_key
+        self._key_envs = tuple(
+            env
+            for env in (api_key_env or defaults.get("api_key_env"), *defaults.get("extra_key_envs", ()))
+            if env
+        )
+        self._price = price_per_mtok
+        self._timeout = timeout
+        self._transport = transport or (
+            lambda url, headers, payload: _http_post_json(url, headers, payload, self._timeout)
+        )
+
+    def _resolve_key(self) -> str | None:
+        if self._api_key:
+            return self._api_key
+        for env in self._key_envs:
+            value = os.environ.get(env)
+            if value:
+                return value
+        return None
+
+    def available(self) -> bool:
+        return bool(self._base_url) and self._resolve_key() is not None
+
+    def complete(
+        self,
+        prompt: str,
+        *,
+        system: str = "",
+        model: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+    ) -> LLMResponse:
+        key = self._resolve_key()
+        if key is None:
+            raise OSError(
+                f"no API key for provider {self.name!r} "
+                f"(set one of: {', '.join(self._key_envs) or 'api_key'})"
+            )
+        resolved_model = model or self._model
+        messages: list[dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        data = self._transport(
+            f"{self._base_url}/chat/completions",
+            {"Authorization": f"Bearer {key}"},
+            {"model": resolved_model, "messages": messages, "max_tokens": max_tokens},
+        )
+        try:
+            text = str(data["choices"][0]["message"]["content"] or "")
+        except (KeyError, IndexError, TypeError) as exc:
+            raise ValueError(f"malformed {self.name} response: {exc!r}") from exc
+        usage = data.get("usage") or {}
+        input_tokens = int(usage.get("prompt_tokens", 0))
+        output_tokens = int(usage.get("completion_tokens", 0))
+        if self._price is not None:
+            cost = (input_tokens * self._price[0] + output_tokens * self._price[1]) / 1_000_000
+        else:
+            cost = estimate_cost_usd(resolved_model, input_tokens, output_tokens)
+        return LLMResponse(
+            text=text,
+            model=resolved_model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=cost,
+            fingerprint=request_fingerprint(resolved_model, prompt, system),
+        )
+
+
 class RecordingClient:
     """Wraps a real client and persists each response as a replayable fixture."""
 
@@ -271,9 +448,15 @@ class RecordingClient:
 class ManifestLoggingClient:
     """Decorator that records every completion in the run manifest."""
 
-    def __init__(self, inner: LLMClient, manifest: "RunManifest") -> None:
+    def __init__(
+        self,
+        inner: LLMClient,
+        manifest: "RunManifest",
+        extra: Mapping[str, Any] | None = None,
+    ) -> None:
         self._inner = inner
         self._manifest = manifest
+        self._extra = dict(extra or {})
         self.name = f"{inner.name}+manifest"
 
     def available(self) -> bool:
@@ -300,36 +483,161 @@ class ManifestLoggingClient:
                 "input_tokens": response.input_tokens,
                 "output_tokens": response.output_tokens,
                 "cost_usd": response.cost_usd,
+                **self._extra,
             }
         )
         return response
 
 
+class PerAgentLLMRouter:
+    """Routes each agent to its own backbone, with per-agent offline fallback.
+
+    ``for_agent`` returns the agent's (manifest-logged) client, or ``None``
+    when that backbone is not configured or failed its build-time
+    availability check — the skill then takes its deterministic offline path
+    for that agent alone. ``reasons`` records why a backbone is offline so
+    the degradation is auditable rather than silent.
+    """
+
+    name = "per-agent"
+
+    def __init__(
+        self,
+        clients: Mapping[str, LLMClient | None],
+        reasons: Mapping[str, str] | None = None,
+    ) -> None:
+        self._clients = dict(clients)
+        self.reasons = dict(reasons or {})
+
+    def for_agent(self, agent: str) -> LLMClient | None:
+        return self._clients.get(agent)
+
+    def assignments(self) -> dict[str, str | None]:
+        """agent -> backbone client name (None when offline)."""
+
+        return {
+            agent: (client.name if client is not None else None)
+            for agent, client in self._clients.items()
+        }
+
+    def available(self) -> bool:
+        return any(client is not None for client in self._clients.values())
+
+    def complete(
+        self,
+        prompt: str,
+        *,
+        system: str = "",
+        model: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+    ) -> LLMResponse:
+        raise RuntimeError(
+            "PerAgentLLMRouter has no default backbone; resolve a client with "
+            "llm_for_agent(ctx.llm, '<agent_name>') before calling complete()."
+        )
+
+
+def llm_for_agent(llm: Any, agent: str) -> LLMClient | None:
+    """Resolve the client one agent should use from ``RunContext.llm``.
+
+    Handles all three shapes: None (no LLM), a single shared client
+    (none/stub/single-provider modes), or a PerAgentLLMRouter.
+    """
+
+    if llm is None:
+        return None
+    if isinstance(llm, PerAgentLLMRouter):
+        return llm.for_agent(agent)
+    return llm
+
+
+def _normalize_provider(provider: str) -> str:
+    provider = provider.lower().strip()
+    return PROVIDER_ALIASES.get(provider, provider)
+
+
+def _single_client(
+    provider: str, model: str, settings: Mapping[str, Any]
+) -> LLMClient:
+    """Construct one un-wrapped provider client (no manifest logging)."""
+
+    provider = _normalize_provider(provider)
+    if provider == "stub":
+        fixtures = settings.get("fixtures", "tests/fixtures/llm_fixtures.json")
+        return RecordedStubClient.from_path(fixtures, default_model=model)
+    if provider == "anthropic":
+        return AnthropicClient(model=model, api_key=settings.get("api_key"))
+    if provider in PROVIDER_DEFAULTS:
+        price = settings.get("price_per_mtok")
+        return OpenAICompatibleClient(
+            provider,
+            model,
+            base_url=settings.get("base_url"),
+            api_key=settings.get("api_key"),
+            api_key_env=settings.get("api_key_env"),
+            price_per_mtok=tuple(price) if price else None,
+            timeout=float(settings.get("timeout", DEFAULT_HTTP_TIMEOUT)),
+        )
+    raise ValueError(
+        f"Unknown llm provider: {provider!r}; expected one of "
+        f"{sorted((*PROVIDER_DEFAULTS, 'stub', 'none', 'per-agent'))}"
+    )
+
+
 def build_llm_client(
     config: Mapping[str, Any], manifest: "RunManifest | None" = None
-) -> LLMClient | None:
+) -> LLMClient | PerAgentLLMRouter | None:
     """Construct the configured client; ``provider: none`` yields ``None``.
 
-    When a manifest is supplied the client is wrapped so every call is
-    logged — callers should always pass the run manifest so spend tracking
-    cannot be bypassed.
+    ``provider: per-agent`` builds a router with one backbone per agent from
+    ``llm.agents``; each backbone is availability-checked at build time and
+    routes to ``None`` (offline fallback) when its key or SDK is missing.
+    When a manifest is supplied every live client is wrapped so each call is
+    logged with its agent and provider — callers should always pass the run
+    manifest so spend tracking cannot be bypassed.
     """
 
     llm_config = config.get("llm") or {}
     provider = str(llm_config.get("provider", "none")).lower()
     model = str(llm_config.get("model", DEFAULT_MODEL))
 
-    client: LLMClient | None
     if provider in ("none", ""):
-        client = None
-    elif provider == "stub":
-        fixtures = llm_config.get("fixtures", "tests/fixtures/llm_fixtures.json")
-        client = RecordedStubClient.from_path(fixtures, default_model=model)
-    elif provider == "anthropic":
-        client = AnthropicClient(model=model)
-    else:
-        raise ValueError(f"Unknown llm provider: {provider!r}")
+        return None
 
-    if client is not None and manifest is not None:
+    if provider == "per-agent":
+        agent_entries = llm_config.get("agents") or {}
+        clients: dict[str, LLMClient | None] = {}
+        reasons: dict[str, str] = {}
+        for agent in AGENT_NAMES:
+            entry = agent_entries.get(agent) or {}
+            agent_provider = str(entry.get("provider", "")).strip()
+            if not agent_provider:
+                clients[agent] = None
+                reasons[agent] = "no backbone configured"
+                continue
+            agent_model = str(
+                entry.get("model")
+                or PROVIDER_DEFAULTS.get(_normalize_provider(agent_provider), {}).get(
+                    "model", model
+                )
+            )
+            client = _single_client(agent_provider, agent_model, {**llm_config, **entry})
+            if not client.available():
+                clients[agent] = None
+                reasons[agent] = (
+                    f"backbone {client.name!r} unavailable (missing API key or SDK); "
+                    "deterministic offline fallback in effect"
+                )
+                continue
+            if manifest is not None:
+                clients[agent] = ManifestLoggingClient(
+                    client, manifest, extra={"agent": agent, "provider": client.name}
+                )
+            else:
+                clients[agent] = client
+        return PerAgentLLMRouter(clients, reasons)
+
+    client = _single_client(provider, model, llm_config)
+    if manifest is not None:
         client = ManifestLoggingClient(client, manifest)
     return client

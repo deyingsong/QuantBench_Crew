@@ -56,7 +56,7 @@ def test_fallback_candidate_passes_all_template_tests(make_ctx) -> None:
     assert payload["entry_point"] == "build_strategy"
     assert (ctx.run_dir / "generated" / "strategy.py").exists()
     assert "generated/strategy.py" in ctx.manifest.artifacts
-    assert any("no generator configured" in note for note in result.notes)
+    assert any("no LLM configured for quant_coder" in note for note in result.notes)
 
 
 def test_llm_candidates_are_generated_and_scored(make_ctx) -> None:

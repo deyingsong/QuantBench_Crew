@@ -9,12 +9,42 @@
 # `provider: none` keeps runs free of network and API-key dependencies;
 # `stub` replays recorded fixtures; `anthropic` calls the live API.
 
+# provider: none | stub | per-agent | openai | gemini | anthropic | grok | deepseek
+#
+# `per-agent` (the default) gives each agent its own backbone, matched to the
+# agent's job (see `agents:` below). Each backbone reads its API key from the
+# provider's environment variable "port" (override with `api_key_env`, point
+# at a proxy with `base_url`):
+#   openai -> OPENAI_API_KEY        gemini   -> GEMINI_API_KEY (or GOOGLE_API_KEY)
+#   grok   -> XAI_API_KEY           deepseek -> DEEPSEEK_API_KEY
+#   anthropic -> ANTHROPIC_API_KEY (or ANTHROPIC_AUTH_TOKEN; needs `pip install anthropic`)
+#
+# Fallback: a backbone whose key/SDK is missing — or whose live call errors —
+# downgrades THAT AGENT ALONE to its deterministic offline fallback, with the
+# reason recorded in the run manifest. With no keys at all this config
+# degrades to the fully offline dry workflow.
 llm:
-  provider: none
-  model: claude-opus-4-8
+  provider: per-agent
+  model: claude-opus-4-8          # default for single-provider modes
   max_tokens: 4096
-  fixtures: tests/fixtures/llm_fixtures.json
+  fixtures: tests/fixtures/llm_fixtures.json   # stub provider only
   cost_cap_usd: 2.0
+  agents:
+    quant_scout:                  # discovery/triage of fresh papers: Grok's
+      provider: grok              # real-time orientation; cheap bulk scoring
+      model: grok-4
+    quant_reader:                 # long-document method/claim extraction:
+      provider: gemini            # Gemini's long context + doc understanding
+      model: gemini-2.5-pro
+    quant_coder:                  # strategy code generation: Claude's coding
+      provider: anthropic         # strength; synergy with the headless
+      model: claude-opus-4-8      # Claude Code agent adapter
+    quant_bench:                  # numeric/statistical interpretation:
+      provider: deepseek          # DeepSeek's math reasoning at low cost
+      model: deepseek-chat
+    quant_reviewer:               # final synthesis and red-team critique:
+      provider: openai            # GPT's balanced general reasoning
+      model: gpt-5
 
 agents:
   quant_scout:

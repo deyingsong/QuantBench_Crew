@@ -119,11 +119,13 @@ quantbench run [options]         # or: python -m quantbench_crew.main
 | `--processed-path PATH` | `data/processed/seen_papers.json` | cross-run dedup watermark (arxiv source) |
 | `--no-dedup` | off | disable the processed-paper watermark |
 
-**Full pipeline without API keys.** Copy `configs/agents.yaml`, flip
-`enabled: true` on the skills you want, and run against the golden paper —
-with `llm.provider: none` every LLM-backed skill downgrades to its
-deterministic fallback, so this exercises extraction, code generation,
-sandboxing, walk-forward benchmarking, and the rubric verdict end to end:
+**Full pipeline, with or without API keys.** Copy `configs/agents.yaml`, flip
+`enabled: true` on the skills you want, and run against the golden paper. The
+shipped `llm.provider: per-agent` uses each agent's live backbone when its
+API key is present and downgrades that agent to its deterministic fallback
+when it is not — so the same command exercises extraction, code generation,
+sandboxing, walk-forward benchmarking, and the rubric verdict end to end
+either way (set `llm.provider: none` to force everything offline):
 
 ```bash
 quantbench run --paper-json tests/fixtures/golden_paper.json \
@@ -139,27 +141,56 @@ quantbench run --source arxiv --query "cross-sectional momentum" --max-papers 5
 ### 4. Configuration (`configs/agents.yaml`)
 
 The top-level `llm:` section configures the one seam every LLM call routes
-through:
+through. The shipped default is **per-agent backbones**: each agent gets its
+own provider, matched to the agent's job:
 
 ```yaml
 llm:
-  provider: none          # none | stub | anthropic
-  model: claude-opus-4-8
+  provider: per-agent     # none | stub | per-agent | <single provider name>
+  model: claude-opus-4-8  # default for single-provider modes
   fixtures: tests/fixtures/llm_fixtures.json   # stub provider replays these
-  cost_cap_usd: 2.0       # per-paper spend cap, enforced mid-search
+  cost_cap_usd: 2.0       # per-paper spend cap across ALL backbones
+  agents:
+    quant_scout:    {provider: grok,      model: grok-4}
+    quant_reader:   {provider: gemini,    model: gemini-2.5-pro}
+    quant_coder:    {provider: anthropic, model: claude-opus-4-8}
+    quant_bench:    {provider: deepseek,  model: deepseek-chat}
+    quant_reviewer: {provider: openai,    model: gpt-5}
 ```
 
-- `none` — no client; every skill uses its deterministic fallback.
-- `stub` — replays recorded fixtures keyed by request fingerprint (tests/CI).
-- `anthropic` — live API; needs `pip install anthropic` and `ANTHROPIC_API_KEY`
-  (or `ANTHROPIC_AUTH_TOKEN`) in the environment. Every call is logged to the
-  manifest with model, tokens, and cost; the cost cap stops generation loops.
+| Agent | Backbone | Port (API-key env var) | Why this match |
+| --- | --- | --- | --- |
+| scout | Grok (xAI) | `XAI_API_KEY` (or `GROK_API_KEY`) | discovery/triage of fresh papers; real-time orientation, cheap bulk scoring |
+| reader | Gemini | `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | long-document method/claim extraction; long context |
+| coder | Claude | `ANTHROPIC_API_KEY` (or `ANTHROPIC_AUTH_TOKEN`) | strongest code generation; synergy with the headless-Claude agent adapter |
+| bench | DeepSeek | `DEEPSEEK_API_KEY` | numeric/statistical interpretation; strong math reasoning at low cost |
+| reviewer | GPT (OpenAI) | `OPENAI_API_KEY` | final synthesis and red-team critique; balanced general reasoning |
+
+Copy `.env.example` for the full list of ports. Per-agent entries also accept
+`api_key_env:` (route a key from a custom variable) and `base_url:` (point a
+provider at a proxy or compatible endpoint); GPT/Gemini/Grok/DeepSeek are
+served by one stdlib HTTP adapter (no extra packages), while Claude uses the
+official SDK (`pip install anthropic`). Model names are operator-editable
+defaults.
+
+**Fallback contract.** Backbones are availability-checked when a run starts
+(key present, SDK importable) and every live call is guarded: if an agent's
+provider is missing, unreachable, or errors mid-call, **that agent alone**
+drops to its deterministic offline fallback and the reason is recorded in the
+run manifest — the other four agents keep their backbones. With no keys at
+all, the shipped config degrades to exactly the offline dry workflow. Every
+live call is logged to the manifest with agent, provider, model, tokens, and
+cost; the single `cost_cap_usd` is enforced across all backbones per paper.
+
+Other provider modes: `none` (force everything offline), `stub` (replay
+recorded fixtures keyed by request fingerprint — tests/CI), or a single
+provider name (e.g. `provider: deepseek`) to run every agent on one backbone.
 
 `quant_scout.charter` defines what research is in scope (purpose, themes,
 must-haves, exclusions); when the `charter_relevance` skill is enabled it
-dominates the keyword ranking. `.env.example` holds PaperQA2-related settings
-(`OPENAI_API_KEY` is PaperQA2's default backend, distinct from the pipeline's
-own LLM seam).
+dominates the keyword ranking. Note `OPENAI_API_KEY` does double duty: it is
+also PaperQA2's default backend for full-text reading, separately from the
+reviewer's backbone.
 
 Per-agent skills, all shipped `enabled: false`:
 
@@ -286,7 +317,7 @@ expected outcomes (`pytest -m eval`, deselected by default):
 
 That last row is the project's thesis in miniature: the system beats the null
 yet *declines* to claim a reproduction, because the deflated-Sharpe bar is not
-cleared. Suite totals: **210 tests** (fast suite + `e2e` + `eval` markers);
+cleared. Suite totals: **223 tests** (fast suite + `e2e` + `eval` markers);
 CRSP-backed cases skip automatically when the data is absent.
 
 ### 10. Repository layout
@@ -308,7 +339,7 @@ src/quantbench_crew/
   llm.py                  provider-agnostic LLM seam (none/stub/anthropic, cost log)
   artifacts.py            run manifest + artifact store (content hashing)
   prompts/                prompt templates
-tests/                    210 tests incl. e2e and eval markers
+tests/                    223 tests incl. e2e and eval markers
 ```
 
 ### 11. Project status and docs
