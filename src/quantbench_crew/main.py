@@ -248,6 +248,9 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
             analysis = replace(analysis, relevance=scored.relevance)
         implementation_plan = coder.plan(analysis)
         codegen = coder.generate(analysis, implementation_plan, ctx)
+        # Synthesize any paper-claimed metric the built-in suite lacks, so
+        # the bench can claim-compare it (validated modules become artifacts).
+        coder.synthesize_metrics(analysis, ctx)
         if codegen is not None and store is not None:
             code_file = store.run_dir / str(codegen.payload.get("code_path", ""))
             if code_file.is_file():

@@ -25,6 +25,26 @@ _METRIC_ALIASES = {
     "sharpe_ratio": "sharpe",
     "volatility": "volatility",
     "max_drawdown": "max_drawdown",
+    "maximum_drawdown": "max_drawdown",
+    "mdd": "max_drawdown",
+    "calmar": "calmar_ratio",
+    "calmar_ratio": "calmar_ratio",
+    "sortino": "sortino_ratio",
+    "sortino_ratio": "sortino_ratio",
+    "expected_shortfall": "expected_shortfall",
+    "cvar": "expected_shortfall",
+    "es": "expected_shortfall",
+    "conditional_value_at_risk": "expected_shortfall",
+    "directional_accuracy": "directional_accuracy",
+    "hit_rate": "directional_accuracy",
+    "win_rate": "directional_accuracy",
+    "profit_factor": "profit_factor",
+    "tail_ratio": "tail_ratio",
+    "gross_pnl": "gross_pnl",
+    "net_pnl": "net_pnl",
+    "pnl": "net_pnl",
+    "turnover": "average_turnover",
+    "average_turnover": "average_turnover",
 }
 
 
@@ -33,9 +53,31 @@ def achieved_for_claim(claim: Claim, metrics: Mapping[str, float]) -> float | No
 
     normalized = claim.metric.lower().strip().replace(" ", "_")
     key = _METRIC_ALIASES.get(normalized)
-    if key is None or key not in metrics:
-        return None
-    return float(metrics[key])
+    if key is not None and key in metrics:
+        return float(metrics[key])
+    # Direct-key fallback: synthesized metrics land in the achieved dict under
+    # the claim's normalized name, so they compare without an alias entry.
+    if normalized in metrics:
+        return float(metrics[normalized])
+    return None
+
+
+def normalize_metric_name(metric: str) -> str:
+    """Canonical snake_case form of a paper's metric name."""
+
+    return "_".join(metric.lower().strip().split()).replace("-", "_")
+
+
+def unmapped_claims(
+    target: ReproductionTarget | None, metrics: Mapping[str, float]
+) -> tuple[Claim, ...]:
+    """Claims whose metric has no achieved value — candidates for synthesis."""
+
+    if target is None:
+        return ()
+    return tuple(
+        claim for claim in target.claims if achieved_for_claim(claim, metrics) is None
+    )
 
 
 def compare_claim(claim: Claim, metrics: Mapping[str, float]) -> ClaimComparison:

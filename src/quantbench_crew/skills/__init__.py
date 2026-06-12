@@ -163,6 +163,7 @@ def resolve_skills(agent: str, config: Mapping[str, Any]) -> dict[str, Skill]:
 from quantbench_crew.skills.bench import dataset_registry as _bench_dataset_registry  # noqa: E402,F401
 from quantbench_crew.skills.bench import walk_forward as _bench_walk_forward  # noqa: E402,F401
 from quantbench_crew.skills.coder import code_generation as _coder_code_generation  # noqa: E402,F401
+from quantbench_crew.skills.coder import metric_synthesis as _coder_metric_synthesis  # noqa: E402,F401
 from quantbench_crew.skills.reader import method_spec as _reader_method_spec  # noqa: E402,F401
 from quantbench_crew.skills.reader import pdf_acquisition as _reader_pdf_acquisition  # noqa: E402,F401
 from quantbench_crew.skills.reader import red_flag as _reader_red_flag  # noqa: E402,F401

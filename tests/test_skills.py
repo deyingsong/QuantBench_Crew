@@ -144,7 +144,10 @@ def test_shipped_config_resolves_only_code_generation() -> None:
     config = load_config("configs/agents.yaml")
     for agent in ("quant_scout", "quant_reader", "quant_bench", "quant_reviewer"):
         assert default_registry.resolve(agent, config) == {}
-    assert list(default_registry.resolve("quant_coder", config)) == ["code_generation"]
+    assert sorted(default_registry.resolve("quant_coder", config)) == [
+        "code_generation",
+        "metric_synthesis",
+    ]
 
 
 def test_workstream_b_skills_are_registered() -> None:

@@ -1,0 +1,29 @@
+Write a complete, self-contained Python module implementing one performance
+metric for a trading-strategy return series. It will run in a sandbox where
+ONLY these stdlib imports are allowed: math, statistics, random, datetime,
+itertools, functools, collections, json, typing, dataclasses, operator,
+bisect, heapq. Do not use eval/exec/open/getattr/setattr, dunder attribute
+access, file or network access, or a __main__ block.
+
+The module must define exactly:
+
+    def compute_metric(returns, periods_per_year):
+        ...returns a single float...
+
+- `returns` is a list of per-period simple returns of a unit-notional
+  portfolio (e.g. 0.0095 means +0.95% that period), in time order.
+- `periods_per_year` is a float (12.0 for monthly, 252.0 for daily); use it
+  for any annualization the metric requires.
+- The function must be deterministic, must not mutate its inputs, and must
+  return a finite float for any non-empty list of floats (guard divisions:
+  return 0.0 when a denominator is zero rather than raising).
+
+Metric to implement: {metric_name}
+Unit / periodicity stated by the paper: {unit}
+Context from the paper: {context}
+
+Implement the standard, textbook definition of this metric as used in the
+quantitative finance literature. If the metric name is ambiguous, prefer the
+interpretation implied by the stated unit and context.
+
+Return ONLY the Python module source, in a single ```python code block.

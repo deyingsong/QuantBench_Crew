@@ -131,6 +131,10 @@ agents:
                             # keeps this offline-safe with no LLM keys
         iterations: 3
         adapter: complete   # complete | agent (headless Claude Code; falls back when unavailable)
+      metric_synthesis:
+        enabled: true       # code paper-claimed metrics the suite lacks;
+                            # offline-safe (skips with a note when no LLM)
+        max_metrics: 3
   quant_bench:
     role: Benchmark evaluation and robustness checks
     default_metrics:

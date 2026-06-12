@@ -60,6 +60,20 @@ class QuantCoderAgent:
             return None
         return skill.run(ctx, analysis=analysis, plan=plan)
 
+    def synthesize_metrics(
+        self, analysis: PaperAnalysis, ctx: "RunContext | None"
+    ) -> "SkillResult | None":
+        """Code any paper-claimed metric the built-in suite does not cover.
+
+        Returns None when the skill is not enabled or no run context exists;
+        unmapped claims then simply stay uncompared, exactly as before.
+        """
+
+        skill = self.skills.get("metric_synthesis")
+        if skill is None or ctx is None:
+            return None
+        return skill.run(ctx, analysis=analysis)
+
 
 class _PlanGenerator:
     """Deterministic QuantBench generator compatible with ERA's interface."""
