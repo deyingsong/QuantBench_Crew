@@ -1,5 +1,6 @@
 google_paper/
 runs/
+reports/
 data/raw/
 data/processed/
 .DS_Store

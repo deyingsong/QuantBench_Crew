@@ -6,12 +6,13 @@ import pytest
 import yaml
 
 from quantbench_crew.config import load_config
-from quantbench_crew.main import run_workflow, write_reports
+from quantbench_crew.main import run_workflow
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
-def test_run_workflow_returns_review_reports() -> None:
+def test_run_workflow_returns_review_reports(tmp_path: Path) -> None:
+    # The shipped config enables code_generation, so a runs dir is required.
     args = Namespace(
         source="local",
         query="asset pricing",
@@ -19,8 +20,9 @@ def test_run_workflow_returns_review_reports() -> None:
         paper_json=None,
         agents_config="configs/agents.yaml",
         benchmark_config="configs/benchmarks.yaml",
-        report_dir="reports",
+        report_dir=str(tmp_path / "reports"),
         write_reports=False,
+        runs_dir=str(tmp_path / "runs"),
     )
 
     reports = run_workflow(args)
@@ -30,7 +32,8 @@ def test_run_workflow_returns_review_reports() -> None:
     assert "research review only" in reports[0].to_markdown()
 
 
-def test_write_reports_creates_markdown(tmp_path: Path) -> None:
+def test_write_reports_creates_markdown_and_strategy(tmp_path: Path) -> None:
+    report_dir = tmp_path / "reports"
     args = Namespace(
         source="local",
         query="asset pricing",
@@ -38,16 +41,19 @@ def test_write_reports_creates_markdown(tmp_path: Path) -> None:
         paper_json=None,
         agents_config="configs/agents.yaml",
         benchmark_config="configs/benchmarks.yaml",
-        report_dir=str(tmp_path),
-        write_reports=False,
+        report_dir=str(report_dir),
+        write_reports=True,
+        runs_dir=str(tmp_path / "runs"),
     )
     reports = run_workflow(args)
 
-    write_reports(reports, tmp_path)
-
-    generated = list(tmp_path.glob("*.md"))
+    generated = list(report_dir.glob("*.md"))
     assert len(generated) == 1
     assert generated[0].read_text(encoding="utf-8").startswith("# ")
+    strategies = list(report_dir.glob("*_strategy.py"))
+    assert len(strategies) == 1
+    assert "def build_strategy" in strategies[0].read_text(encoding="utf-8")
+    assert reports  # workflow returned the same papers it wrote
 
 
 def test_run_workflow_reads_local_json_source(tmp_path: Path) -> None:
@@ -72,8 +78,9 @@ def test_run_workflow_reads_local_json_source(tmp_path: Path) -> None:
         paper_json=str(paper_json),
         agents_config="configs/agents.yaml",
         benchmark_config="configs/benchmarks.yaml",
-        report_dir=str(tmp_path),
+        report_dir=str(tmp_path / "reports"),
         write_reports=False,
+        runs_dir=str(tmp_path / "runs"),
     )
 
     reports = run_workflow(args)

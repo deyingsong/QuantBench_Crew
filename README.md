@@ -29,10 +29,13 @@ pytest -m e2e       # golden-paper end-to-end + synthetic-noise gate
 pytest -m eval      # system regression suite over the curated eval set (slow)
 ```
 
-The dry run prints a Markdown review report per paper and writes a
-reproducibility manifest to `runs/<run_id>/manifest.json`. Everything beyond
-the dry workflow — live arXiv search, LLM-backed extraction, code generation,
-real-data benchmarking — is an opt-in *skill* toggled in
+Each run writes, per paper, a review report (`reports/<slug>.md`), the
+generated strategy implementation (`reports/<slug>_strategy.py`), and a
+reproducibility manifest (`runs/<run_id>/manifest.json`); the report is also
+printed to stdout (`--no-write-reports` disables the files). Code generation
+runs by default with a deterministic offline fallback; everything else beyond
+the dry workflow — live arXiv search, LLM-backed extraction, real-data
+benchmarking — is an opt-in *skill* toggled in
 [configs/agents.yaml](configs/agents.yaml); the sections below explain each
 tier. Always run commands inside the conda environment.
 
@@ -115,8 +118,8 @@ quantbench run [options]         # or: python -m quantbench_crew.main
 | `--paper-json PATH` | – | local JSON list of paper records |
 | `--agents-config PATH` | `configs/agents.yaml` | agent + skill configuration |
 | `--benchmark-config PATH` | `configs/benchmarks.yaml` | benchmark defaults |
-| `--report-dir PATH` | `reports` | report output dir (with `--write-reports`) |
-| `--write-reports` | off | also write `reports/<slug>.md` |
+| `--report-dir PATH` | `reports` | report output dir |
+| `--write-reports / --no-write-reports` | **on** | write `reports/<slug>.md` + the generated `reports/<slug>_strategy.py` per paper |
 | `--runs-dir PATH` | `runs` | manifest dir; each paper writes `<runs-dir>/<run_id>/manifest.json` |
 | `--processed-path PATH` | `data/processed/seen_papers.json` | cross-run dedup watermark (arxiv source) |
 | `--no-dedup` | off | disable the processed-paper watermark |
@@ -263,7 +266,8 @@ dominates the keyword ranking. Note `OPENAI_API_KEY` does double duty: it is
 also PaperQA2's default backend for full-text reading, separately from the
 reviewer's backbone.
 
-Per-agent skills, all shipped `enabled: false`:
+Per-agent skills (all shipped `enabled: false` except `code_generation`,
+which is on by default so reports ship a generated strategy module):
 
 | Agent | Skill | When enabled |
 | --- | --- | --- |
@@ -398,7 +402,7 @@ configs/                  agents.yaml (skills + llm + charter), benchmarks.yaml
 data/raw|processed/       market data + caches (gitignored)
 docs/                     architecture.md, skills-design.md, phase2-design.md, phase2-status.md
 runs/                     per-run manifests + artifacts (gitignored)
-reports/                  written reports (--write-reports)
+reports/                  review .md + generated _strategy.py (on by default; gitignored)
 src/quantbench_crew/
   agents/                 the five agents + the ERA search
   skills/                 registry + per-agent skill implementations

@@ -101,7 +101,15 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--agents-config", default="configs/agents.yaml")
     run.add_argument("--benchmark-config", default="configs/benchmarks.yaml")
     run.add_argument("--report-dir", default="reports")
-    run.add_argument("--write-reports", action="store_true")
+    run.add_argument(
+        "--write-reports",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Write <slug>.md and the generated <slug>_strategy.py per paper "
+            "into --report-dir (on by default; --no-write-reports disables)."
+        ),
+    )
     run.add_argument(
         "--runs-dir",
         default="runs",
@@ -211,6 +219,7 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
     run_config = {"agents": agents_config, "benchmarks": benchmark_config}
 
     reports: list[ReviewReport] = []
+    strategy_sources: dict[str, str] = {}
     ranked = scout.rank(papers, max_papers=args.max_papers)
     for scored in ranked:
         ctx = None
@@ -238,7 +247,11 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         if scored.relevance is not None:
             analysis = replace(analysis, relevance=scored.relevance)
         implementation_plan = coder.plan(analysis)
-        coder.generate(analysis, implementation_plan, ctx)
+        codegen = coder.generate(analysis, implementation_plan, ctx)
+        if codegen is not None and store is not None:
+            code_file = store.run_dir / str(codegen.payload.get("code_path", ""))
+            if code_file.is_file():
+                strategy_sources[scored.paper.slug] = code_file.read_text(encoding="utf-8")
         benchmark_result = bench.evaluate(
             implementation_plan, analysis=analysis, ctx=ctx
         )
@@ -259,16 +272,26 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         registry.save()
 
     if args.write_reports:
-        write_reports(reports, Path(args.report_dir))
+        write_reports(reports, Path(args.report_dir), strategy_sources)
 
     return reports
 
 
-def write_reports(reports: list[ReviewReport], report_dir: Path) -> None:
+def write_reports(
+    reports: list[ReviewReport],
+    report_dir: Path,
+    strategy_sources: dict[str, str] | None = None,
+) -> None:
+    """Write each paper's review markdown and its generated strategy module."""
+
     report_dir.mkdir(parents=True, exist_ok=True)
     for report in reports:
-        path = report_dir / f"{report.paper.slug}.md"
+        slug = report.paper.slug
+        path = report_dir / f"{slug}.md"
         path.write_text(report.to_markdown(), encoding="utf-8")
+        source = (strategy_sources or {}).get(slug)
+        if source:
+            (report_dir / f"{slug}_strategy.py").write_text(source, encoding="utf-8")
 
 
 if __name__ == "__main__":

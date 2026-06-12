@@ -7,6 +7,31 @@ import pytest
 from quantbench_crew.artifacts import RunManifest, stable_hash
 from quantbench_crew.skills.base import RunContext
 
+_LLM_KEY_ENVS = (
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
+    "OPENAI_API_KEY",
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
+    "XAI_API_KEY",
+    "GROK_API_KEY",
+    "DEEPSEEK_API_KEY",
+)
+
+
+@pytest.fixture(autouse=True)
+def _no_live_llm_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Strip provider keys so no test ever places a live LLM call.
+
+    The shipped config defaults to per-agent live backbones (and the coder's
+    code_generation skill is on by default), so tests that exercise default
+    configs would otherwise go live on any developer machine with keys
+    exported. Tests that need a key set one explicitly via monkeypatch.
+    """
+
+    for var in _LLM_KEY_ENVS:
+        monkeypatch.delenv(var, raising=False)
+
 
 @pytest.fixture
 def make_ctx(tmp_path: Path) -> Callable[..., RunContext]:

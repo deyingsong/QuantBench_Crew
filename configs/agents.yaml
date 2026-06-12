@@ -126,7 +126,9 @@ agents:
       - open_questions
     skills:
       code_generation:
-        enabled: false
+        enabled: true       # on by default: reports ship <slug>_strategy.py;
+                            # the deterministic reference-template fallback
+                            # keeps this offline-safe with no LLM keys
         iterations: 3
         adapter: complete   # complete | agent (headless Claude Code; falls back when unavailable)
   quant_bench:

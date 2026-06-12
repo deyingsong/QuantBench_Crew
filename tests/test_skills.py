@@ -134,20 +134,17 @@ def test_fallback_cycle_raises() -> None:
         registry.resolve("quant_scout", _config("quant_scout", {"a": {"enabled": True}}))
 
 
-def test_shipped_config_resolves_no_skills() -> None:
-    # Workstream B registers real skills, but the shipped config keeps every
-    # entry disabled: default pipeline behavior stays the dry workflow.
+def test_shipped_config_resolves_only_code_generation() -> None:
+    # The shipped config keeps every skill disabled — the dry workflow stays
+    # the baseline — with one deliberate exception: code_generation is on by
+    # default so reports ship a generated <slug>_strategy.py, and its
+    # deterministic reference-template fallback keeps it offline-safe.
     from quantbench_crew.config import load_config
 
     config = load_config("configs/agents.yaml")
-    for agent in (
-        "quant_scout",
-        "quant_reader",
-        "quant_coder",
-        "quant_bench",
-        "quant_reviewer",
-    ):
+    for agent in ("quant_scout", "quant_reader", "quant_bench", "quant_reviewer"):
         assert default_registry.resolve(agent, config) == {}
+    assert list(default_registry.resolve("quant_coder", config)) == ["code_generation"]
 
 
 def test_workstream_b_skills_are_registered() -> None:
