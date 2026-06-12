@@ -303,6 +303,9 @@ class ProcessedRegistry:
         arxiv_id = str(paper.raw.get("arxiv_id") or "").strip()
         if arxiv_id:
             keys.append(f"arxiv:{arxiv_id}")
+        doi = str(paper.raw.get("doi") or "").strip().lower()
+        if doi:
+            keys.append(f"doi:{doi}")
         return tuple(keys)
 
     def is_seen(self, paper: Paper) -> bool:

@@ -107,9 +107,10 @@ quantbench run [options]         # or: python -m quantbench_crew.main
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
-| `--source {local,arxiv}` | `local` | built-in/JSON records, or live arXiv q-fin search |
-| `--query` | `"quantitative finance"` | search query (arxiv source) |
-| `--max-papers` | `2` | papers to process |
+| `--source NAME` | `local` | `local` (JSON records), `arxiv` (live q-fin search), a conference — `kdd`, `icml`, `iclr`, `wsdm`, `aaai`, `ijcai`, `www` (ACM Web Conference), `neurips` — a journal — `jf`, `jfe`, `rfs` — or a group: `conferences`, `journals` |
+| `--query` | `"quantitative finance"` | search query (non-local sources) |
+| `--year N` | – | restrict conference/journal sources to one publication year |
+| `--max-papers` | `2` | papers to process (split across a group's venues) |
 | `--paper-json PATH` | – | local JSON list of paper records |
 | `--agents-config PATH` | `configs/agents.yaml` | agent + skill configuration |
 | `--benchmark-config PATH` | `configs/benchmarks.yaml` | benchmark defaults |
@@ -132,11 +133,30 @@ quantbench run --paper-json tests/fixtures/golden_paper.json \
   --agents-config my-agents.yaml --max-papers 1
 ```
 
-**Live arXiv** (network; results deduplicated against previous runs):
+**Live sources** (network; results deduplicated against previous runs by
+arXiv id / DOI / title watermark):
 
 ```bash
 quantbench run --source arxiv --query "cross-sectional momentum" --max-papers 5
+quantbench run --source neurips --query "portfolio optimization" --year 2024 --max-papers 5
+quantbench run --source jfe --query "momentum" --max-papers 3
+quantbench run --source conferences --query "return prediction" --max-papers 8
 ```
+
+Conferences (KDD, ICML, ICLR, WSDM, AAAI, IJCAI, WWW, NeurIPS) are searched
+via DBLP's canonical venue streams, with abstracts and open-access PDF links
+enriched from OpenAlex in one batched DOI lookup; journals (Journal of
+Finance, Journal of Financial Economics, Review of Financial Studies) are
+searched via OpenAlex filtered by ISSN. Both backends are keyless; on network
+failure each source falls back to deterministic offline placeholders.
+
+Two search-semantics notes: conference queries match paper **titles** (DBLP
+indexes titles, not abstracts), so prefer short title-like terms ("portfolio",
+"stock prediction") over phrases; journal queries match full metadata
+including abstracts. Papers without a DOI (common for NeurIPS proceedings)
+cannot be abstract-enriched and arrive title-only; the finance journals are
+paywalled, so expect metadata + abstract rather than full-text PDFs unless a
+paper has an open-access copy.
 
 ### 4. Configuration (`configs/agents.yaml`)
 

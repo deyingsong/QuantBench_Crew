@@ -27,6 +27,7 @@ from quantbench_crew.tools.arxiv_tool import (
     load_local_papers,
     search_arxiv,
 )
+from quantbench_crew.tools.venue_tool import VENUE_GROUPS, VENUES, expand_source, search_venues
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -52,8 +53,23 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
 
     run = subparsers.add_parser("run", help="Run the paper review workflow.")
-    run.add_argument("--source", choices=("local", "arxiv"), default="local")
+    run.add_argument(
+        "--source",
+        choices=("local", "arxiv", *VENUES, *VENUE_GROUPS),
+        default="local",
+        help=(
+            "Paper source: local JSON, live arXiv (q-fin), a conference "
+            "(kdd, icml, iclr, wsdm, aaai, ijcai, www, neurips), a journal "
+            "(jf, jfe, rfs), or a group (conferences, journals)."
+        ),
+    )
     run.add_argument("--query", default="quantitative finance")
+    run.add_argument(
+        "--year",
+        type=int,
+        default=None,
+        help="Restrict conference/journal sources to one publication year.",
+    )
     run.add_argument("--max-papers", type=int, default=2)
     run.add_argument("--paper-json", help="Path to a local JSON list of paper records.")
     run.add_argument("--agents-config", default="configs/agents.yaml")
@@ -98,13 +114,22 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
     )
 
     registry: ProcessedRegistry | None = None
+    venue_keys = expand_source(args.source)
     if args.source == "arxiv":
         papers = search_arxiv(args.query, max_results=args.max_papers)
-        if not getattr(args, "no_dedup", False):
-            registry = ProcessedRegistry(getattr(args, "processed_path", DEFAULT_PROCESSED_PATH))
-            papers = registry.filter_unseen(papers)
+    elif venue_keys:
+        papers = search_venues(
+            venue_keys,
+            args.query,
+            max_results=args.max_papers,
+            year=getattr(args, "year", None),
+        )
     else:
         papers = load_local_papers(args.paper_json)
+
+    if args.source != "local" and not getattr(args, "no_dedup", False):
+        registry = ProcessedRegistry(getattr(args, "processed_path", DEFAULT_PROCESSED_PATH))
+        papers = registry.filter_unseen(papers)
 
     agent_skills = {
         name: resolve_skills(name, agents_config)
