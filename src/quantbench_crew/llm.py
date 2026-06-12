@@ -40,11 +40,14 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import subprocess
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Protocol, runtime_checkable
 
+from quantbench_crew.agent_skills import compose_system, load_agent_skill
 from quantbench_crew.artifacts import stable_hash
 
 if TYPE_CHECKING:
@@ -97,6 +100,12 @@ PROVIDER_DEFAULTS: dict[str, dict[str, Any]] = {
 
 # Friendly names accepted in configs.
 PROVIDER_ALIASES = {"gpt": "openai", "claude": "anthropic", "xai": "grok", "google": "gemini"}
+
+# Route 1 default: drive headless Claude Code. Operators point this at any
+# skill-supporting agent host (Codex CLI, Gemini CLI, ...) via per-agent
+# ``harness_command``; {prompt}, {system}, {model} are substituted.
+DEFAULT_HARNESS_COMMAND = ("claude", "-p", "{prompt}", "--model", "{model}")
+DEFAULT_HARNESS_TIMEOUT = 300.0
 
 # USD per million input/output tokens (cached from the Claude model catalog,
 # 2026-05-26). Unknown models price at 0.0 so cost totals stay conservative
@@ -489,6 +498,110 @@ class ManifestLoggingClient:
         return response
 
 
+class SkillAugmentedClient:
+    """Prepends an agent's SKILL.md body to every system prompt (route 2).
+
+    Transparent otherwise: the inner client's name is preserved so manifest
+    entries and assignments still show the real backbone. Because the skill
+    body becomes part of the system prompt, it participates in request
+    fingerprints — editing a skill invalidates recorded fixtures for that
+    agent, by design.
+    """
+
+    def __init__(self, inner: LLMClient, skill_body_composer: Callable[[str], str]) -> None:
+        self._inner = inner
+        self._compose = skill_body_composer
+        self.name = inner.name
+
+    def available(self) -> bool:
+        return self._inner.available()
+
+    def complete(
+        self,
+        prompt: str,
+        *,
+        system: str = "",
+        model: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+    ) -> LLMResponse:
+        return self._inner.complete(
+            prompt, system=self._compose(system), model=model, max_tokens=max_tokens
+        )
+
+
+class HarnessClient:
+    """Drive an agent-host CLI as an LLM backbone (route 1, the harness port).
+
+    The host (headless Claude Code by default; any Agent-Skills-supporting
+    CLI via ``harness_command``) is invoked per completion with {prompt},
+    {system}, {model} substituted into the command template. When the
+    template has no {system} slot the system prompt is prepended to the
+    prompt text, so skill injection works for every host. Failures —
+    executable missing, non-zero exit, timeout, empty output — raise
+    ``OSError``, which the skill boundary converts into that agent's
+    deterministic offline fallback.
+
+    Token counts and cost are unknown for CLI hosts and recorded as zero;
+    bound harness spend with iteration budgets (cost capture is a follow-up).
+    """
+
+    def __init__(
+        self,
+        provider: str,
+        model: str,
+        command: tuple[str, ...] | list[str] = DEFAULT_HARNESS_COMMAND,
+        timeout: float = DEFAULT_HARNESS_TIMEOUT,
+        runner: Callable[..., subprocess.CompletedProcess] | None = None,
+    ) -> None:
+        self.name = f"harness:{provider}"
+        self._model = model
+        self._command = list(command)
+        self._timeout = timeout
+        self._runner = runner or subprocess.run
+
+    def available(self) -> bool:
+        return bool(self._command) and shutil.which(self._command[0]) is not None
+
+    def complete(
+        self,
+        prompt: str,
+        *,
+        system: str = "",
+        model: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+    ) -> LLMResponse:
+        del max_tokens  # per-response caps are the host's concern
+        resolved_model = model or self._model
+        has_system_slot = any("{system}" in part for part in self._command)
+        prompt_text = prompt if (has_system_slot or not system) else f"{system}\n\n{prompt}"
+        argv = [
+            part.replace("{prompt}", prompt_text)
+            .replace("{system}", system)
+            .replace("{model}", resolved_model)
+            for part in self._command
+        ]
+        try:
+            completed = self._runner(
+                argv, capture_output=True, text=True, timeout=self._timeout
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise OSError(f"harness {argv[0]!r} timed out after {self._timeout}s") from exc
+        if completed.returncode != 0:
+            tail = (completed.stderr or "").strip().splitlines()[-1:] or ["no stderr"]
+            raise OSError(f"harness {argv[0]!r} exited {completed.returncode}: {tail[0]}")
+        text = (completed.stdout or "").strip()
+        if not text:
+            raise OSError(f"harness {argv[0]!r} produced no output")
+        return LLMResponse(
+            text=text,
+            model=resolved_model,
+            input_tokens=0,
+            output_tokens=0,
+            cost_usd=0.0,
+            fingerprint=request_fingerprint(resolved_model, prompt, system),
+        )
+
+
 class PerAgentLLMRouter:
     """Routes each agent to its own backbone, with per-agent offline fallback.
 
@@ -606,6 +719,7 @@ def build_llm_client(
 
     if provider == "per-agent":
         agent_entries = llm_config.get("agents") or {}
+        skills_dir = llm_config.get("skills_dir", "skills")
         clients: dict[str, LLMClient | None] = {}
         reasons: dict[str, str] = {}
         for agent in AGENT_NAMES:
@@ -621,20 +735,45 @@ def build_llm_client(
                     "model", model
                 )
             )
-            client = _single_client(agent_provider, agent_model, {**llm_config, **entry})
+
+            mode = str(entry.get("mode", "api")).lower()
+            if mode == "harness":
+                # Route 1: drive an agent-host CLI instead of the bare API.
+                client: LLMClient = HarnessClient(
+                    _normalize_provider(agent_provider),
+                    agent_model,
+                    command=entry.get("harness_command", DEFAULT_HARNESS_COMMAND),
+                    timeout=float(entry.get("harness_timeout", DEFAULT_HARNESS_TIMEOUT)),
+                )
+            elif mode == "api":
+                client = _single_client(agent_provider, agent_model, {**llm_config, **entry})
+            else:
+                raise ValueError(
+                    f"unknown llm mode {mode!r} for {agent}; expected 'api' or 'harness'"
+                )
+
             if not client.available():
                 clients[agent] = None
                 reasons[agent] = (
-                    f"backbone {client.name!r} unavailable (missing API key or SDK); "
+                    f"backbone {client.name!r} unavailable "
+                    f"({'host CLI not on PATH' if mode == 'harness' else 'missing API key or SDK'}); "
                     "deterministic offline fallback in effect"
                 )
                 continue
             if manifest is not None:
-                clients[agent] = ManifestLoggingClient(
+                client = ManifestLoggingClient(
                     client, manifest, extra={"agent": agent, "provider": client.name}
                 )
-            else:
-                clients[agent] = client
+            # Route 2 (default): inject the agent's SKILL.md into every system
+            # prompt. Outermost wrapper, so logged sizes and fingerprints see
+            # the augmented system. Disabled by skills_dir: "" / false.
+            if skills_dir:
+                skill = load_agent_skill(agent, skills_dir)
+                if skill is not None:
+                    client = SkillAugmentedClient(
+                        client, lambda system, _s=skill: compose_system(_s, system)
+                    )
+            clients[agent] = client
         return PerAgentLLMRouter(clients, reasons)
 
     client = _single_client(provider, model, llm_config)

@@ -23,12 +23,22 @@
 # downgrades THAT AGENT ALONE to its deterministic offline fallback, with the
 # reason recorded in the run manifest. With no keys at all this config
 # degrades to the fully offline dry workflow.
+#
+# Agent Skills (skills/<name>/SKILL.md, open SKILL.md standard) ride on every
+# call two ways, per agent:
+#   mode: api      (route 2, default) single-shot API call with the agent's
+#                  skill body injected into the system prompt
+#   mode: harness  (route 1, opt-in)  drive a skill-supporting agent-host CLI
+#                  instead — headless Claude Code by default; point
+#                  harness_command at codex/gemini/any standard host
+# Set `skills_dir: ""` to disable skill injection entirely.
 llm:
   provider: per-agent
   model: claude-opus-4-8          # default for single-provider modes
   max_tokens: 4096
   fixtures: tests/fixtures/llm_fixtures.json   # stub provider only
   cost_cap_usd: 2.0
+  skills_dir: skills              # Agent Skills root ("" disables injection)
   agents:
     quant_scout:                  # discovery/triage of fresh papers: Grok's
       provider: grok              # real-time orientation; cheap bulk scoring
@@ -37,8 +47,12 @@ llm:
       provider: gemini            # Gemini's long context + doc understanding
       model: gemini-2.5-pro
     quant_coder:                  # strategy code generation: Claude's coding
-      provider: anthropic         # strength; synergy with the headless
-      model: claude-opus-4-8      # Claude Code agent adapter
+      provider: anthropic         # strength; synergy with headless Claude Code
+      model: claude-opus-4-8
+      # Route 1 port — flip mode to drive an agent-host CLI anytime:
+      # mode: harness
+      # harness_command: ["claude", "-p", "{prompt}", "--model", "{model}"]
+      # harness_timeout: 300
     quant_bench:                  # numeric/statistical interpretation:
       provider: deepseek          # DeepSeek's math reasoning at low cost
       model: deepseek-chat

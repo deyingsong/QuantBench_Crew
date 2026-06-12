@@ -186,6 +186,36 @@ Other provider modes: `none` (force everything offline), `stub` (replay
 recorded fixtures keyed by request fingerprint — tests/CI), or a single
 provider name (e.g. `provider: deepseek`) to run every agent on one backbone.
 
+**Agent Skills (SKILL.md).** Each agent has an instruction document in the
+open [Agent Skills](https://agentskills.io) format under
+[skills/](skills/README.md) — `quant-scout` … `quant-reviewer` — teaching its
+backbone the job's conventions (extraction rules, sandbox constraints,
+verdict gates). They are consumed two ways, set per agent:
+
+- **`mode: api` (route 2, the default)** — the router prepends the agent's
+  skill body to the system prompt of every single-shot call. Works with all
+  five providers; no harness needed. Disable globally with `skills_dir: ""`.
+- **`mode: harness` (route 1, opt-in, anytime)** — drive a skill-supporting
+  agent-host CLI instead of the bare API. Default command is headless Claude
+  Code; point `harness_command` at any standard-compliant host
+  (`["claude", "-p", "{prompt}", "--model", "{model}"]` — placeholders
+  `{prompt}`/`{system}`/`{model}` are substituted). A host missing from PATH
+  or a failed invocation falls back offline for that agent like any other
+  backbone failure. CLI hosts don't report tokens, so harness calls log zero
+  cost — bound them with iteration budgets.
+
+```yaml
+    quant_coder:                  # example: flip the coder to route 1
+      provider: anthropic
+      mode: harness
+      harness_command: ["claude", "-p", "{prompt}", "--model", "{model}"]
+```
+
+Editing a SKILL.md changes the system prompt and therefore request
+fingerprints — re-record stub fixtures for that agent after edits. (These
+skill files are unrelated to the runtime plug-ins below; see
+[skills/README.md](skills/README.md).)
+
 `quant_scout.charter` defines what research is in scope (purpose, themes,
 must-haves, exclusions); when the `charter_relevance` skill is enabled it
 dominates the keyword ranking. Note `OPENAI_API_KEY` does double duty: it is
