@@ -105,6 +105,39 @@ def expand_source(source: str) -> tuple[str, ...]:
     return ()
 
 
+def search_venues_pooled(
+    venues: tuple[str, ...] | list[str],
+    pool_selector: str,
+    max_results: int = 5,
+    fetcher: Fetcher | None = None,
+    year: int | None = None,
+) -> list[Paper]:
+    """Search venues with a query-pool selector instead of one query.
+
+    The budget splits across venues as in :func:`search_venues`; within each
+    venue the pool resolves venue-aware (``auto`` picks the venue's matched
+    pool) and fans out across terms with cross-term dedup.
+    """
+
+    from quantbench_crew.tools.query_pool import multi_query_search, resolve_pool
+
+    if not venues:
+        return []
+    per_venue = max(1, max_results // len(venues))
+    papers: list[Paper] = []
+    for venue in venues:
+        terms = resolve_pool(pool_selector, venue=venue)
+        papers.extend(
+            multi_query_search(
+                lambda query, budget, _v=venue: search_venue(_v, query, budget, fetcher, year),
+                terms,
+                per_venue,
+                delay=0.4 if fetcher is None else 0.0,
+            )
+        )
+    return papers[:max_results]
+
+
 def placeholder_venue_papers(venue: str, query: str, max_results: int = 5) -> list[Paper]:
     """Deterministic offline stand-ins for live venue results."""
 

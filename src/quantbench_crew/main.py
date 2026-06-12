@@ -27,7 +27,18 @@ from quantbench_crew.tools.arxiv_tool import (
     load_local_papers,
     search_arxiv,
 )
-from quantbench_crew.tools.venue_tool import VENUE_GROUPS, VENUES, expand_source, search_venues
+from quantbench_crew.tools.query_pool import (
+    format_query_pools,
+    multi_query_search,
+    resolve_pool,
+)
+from quantbench_crew.tools.venue_tool import (
+    VENUE_GROUPS,
+    VENUES,
+    expand_source,
+    search_venues,
+    search_venues_pooled,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -39,6 +50,10 @@ def main(argv: list[str] | None = None) -> int:
         reports = run_workflow(args)
         for report in reports:
             print(report.to_markdown())
+        return 0
+
+    if args.command == "queries":
+        print(format_query_pools())
         return 0
 
     parser.print_help()
@@ -63,7 +78,18 @@ def build_parser() -> argparse.ArgumentParser:
             "(jf, jfe, rfs), or a group (conferences, journals)."
         ),
     )
-    run.add_argument("--query", default="quantitative finance")
+    query_group = run.add_mutually_exclusive_group()
+    query_group.add_argument("--query", default="quantitative finance")
+    query_group.add_argument(
+        "--query-pool",
+        default=None,
+        help=(
+            "Search a curated query pool instead of one query: 'auto' (pool "
+            "matched to each venue), a pool (roots, finance, general-ai, "
+            "core-ml, data-mining), 'pool/category', or 'all'. "
+            "List with: quantbench queries."
+        ),
+    )
     run.add_argument(
         "--year",
         type=int,
@@ -91,6 +117,10 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable dedup against already-processed papers (arxiv source).",
     )
+
+    subparsers.add_parser(
+        "queries", help="List the curated query pools usable with --query-pool."
+    )
     return parser
 
 
@@ -115,15 +145,32 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
 
     registry: ProcessedRegistry | None = None
     venue_keys = expand_source(args.source)
+    query_pool = getattr(args, "query_pool", None)
     if args.source == "arxiv":
-        papers = search_arxiv(args.query, max_results=args.max_papers)
+        if query_pool:
+            papers = multi_query_search(
+                lambda query, budget: search_arxiv(query, max_results=budget),
+                resolve_pool(query_pool),
+                args.max_papers,
+                delay=0.5,
+            )
+        else:
+            papers = search_arxiv(args.query, max_results=args.max_papers)
     elif venue_keys:
-        papers = search_venues(
-            venue_keys,
-            args.query,
-            max_results=args.max_papers,
-            year=getattr(args, "year", None),
-        )
+        if query_pool:
+            papers = search_venues_pooled(
+                venue_keys,
+                query_pool,
+                max_results=args.max_papers,
+                year=getattr(args, "year", None),
+            )
+        else:
+            papers = search_venues(
+                venue_keys,
+                args.query,
+                max_results=args.max_papers,
+                year=getattr(args, "year", None),
+            )
     else:
         papers = load_local_papers(args.paper_json)
 

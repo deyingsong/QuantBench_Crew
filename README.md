@@ -109,6 +109,7 @@ quantbench run [options]         # or: python -m quantbench_crew.main
 | --- | --- | --- |
 | `--source NAME` | `local` | `local` (JSON records), `arxiv` (live q-fin search), a conference — `kdd`, `icml`, `iclr`, `wsdm`, `aaai`, `ijcai`, `www` (ACM Web Conference), `neurips` — a journal — `jf`, `jfe`, `rfs` — or a group: `conferences`, `journals` |
 | `--query` | `"quantitative finance"` | search query (non-local sources) |
+| `--query-pool SEL` | – | search a curated query pool instead of one query: `auto` (each venue's matched pool), a pool name (`roots`, `finance`, `general-ai`, `core-ml`, `data-mining`), `pool/category`, or `all`; mutually exclusive with `--query` |
 | `--year N` | – | restrict conference/journal sources to one publication year |
 | `--max-papers` | `2` | papers to process (split across a group's venues) |
 | `--paper-json PATH` | – | local JSON list of paper records |
@@ -157,6 +158,26 @@ including abstracts. Papers without a DOI (common for NeurIPS proceedings)
 cannot be abstract-enriched and arrive title-only; the finance journals are
 paywalled, so expect metadata + abstract rather than full-text PDFs unless a
 paper has an open-access copy.
+
+**Curated query pools.** Instead of a single `--query`, `--query-pool` fans
+the paper budget across a curated term list with cross-term dedup (each hit
+records the term that found it in `raw["query"]`). Pools are matched to
+source semantics — `finance` (empirical asset pricing, market microstructure,
+momentum strategy, …) for JF/JFE/RFS; `general-ai` (LLM trading bots,
+multi-agent simulation, algorithmic trading, …) for AAAI/IJCAI; `core-ml`
+(time-series foundation models, Mamba, diffusion models, deep RL, …) for
+ICML/ICLR/NeurIPS; `data-mining` (GNNs, sentiment analysis, spatiotemporal
+forecasting, …) for KDD/WSDM/WWW; plus seven high-yield `roots` (portfolio,
+asset pricing, time series, trading, stock, volatility, alpha). `auto`
+resolves each venue to its matched pool, so one command scouts every venue
+with the right vocabulary:
+
+```bash
+quantbench queries                                           # browse the pools
+quantbench run --source conferences --query-pool auto --max-papers 16
+quantbench run --source jfe --query-pool finance/market-mechanics --max-papers 5
+quantbench run --source neurips --query-pool core-ml/generative-synthetic --year 2024
+```
 
 ### 4. Configuration (`configs/agents.yaml`)
 
