@@ -299,12 +299,21 @@ which is on by default so reports ship a generated strategy module):
 | reader | `red_flag_scan` | detect quant pitfalls (no costs, in-sample tuning, survivorship, microcaps, short sample, snooping) |
 | coder | `code_generation` | ERA search over candidate modules; `adapter: complete` (single-shot LLM) or `agent` (headless Claude Code, used when available, otherwise falls back) |
 | coder | `metric_synthesis` | code paper-claimed metrics the built-in suite lacks; sandbox-validated, then computed by the bench on the OOS returns (`max_metrics` caps spend) |
+| coder | `consult_reader` | detect performance-affecting MethodSpec gaps and ask the **Reader** (not a guess) to close them; emits `reader_consultation.json` (`resolve` routes to the reader backbone) |
 | bench | `dataset_registry` | load + provenance-hash the configured `dataset` into the manifest |
 | bench | `walk_forward` | purged/embargoed walk-forward vs baselines; deflated Sharpe; spanning (set `factors_path`); claim comparison |
 | reviewer | `rubric_verdict` | evidence-linked rubric + red-team checklist → honest verdict |
 
 Enabled skills record results in manifests, so a runs directory is required
 (the default `runs/` satisfies this).
+
+The Coder also carries an expert-enhanced open-format skill family — two
+transcript-distilled skills (`strategy-implementer`, `backtest-pitfall-guard`),
+a cross-agent `consult-reader` oracle, and six engineering reskins — plus a
+verbatim, MIT-licensed copy of
+[addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) under
+`skills/engineering/`. See [skills/README.md](skills/README.md) and
+[docs/coder-skills.md](docs/coder-skills.md).
 
 ### 5. Data
 

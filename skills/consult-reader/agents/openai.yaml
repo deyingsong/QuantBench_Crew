@@ -1,0 +1,4 @@
+interface:
+  display_name: "Consult Reader"
+  short_description: "Close MethodSpec gaps by asking the Reader, not by guessing"
+  default_prompt: "Use $consult-reader to find performance-affecting gaps in this MethodSpec, form one hypothesis-carrying question per gap, and route them to the Reader for source-grounded answers. Adopt declared neutral defaults where the source is silent and record them as assumptions; never guess the flattering interpretation."

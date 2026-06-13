@@ -1,0 +1,4 @@
+interface:
+  display_name: "Backtest Pitfall Guard"
+  short_description: "Catch leakage, overfitting, and selection bias in generated strategy code"
+  default_prompt: "Use $backtest-pitfall-guard to sweep this candidate strategy module before accepting it: check look-ahead and parameter leakage, point-in-time/survivorship, in-sample tuning, trial accounting across generation attempts, and overfitting to the paper's claimed result. Report pitfalls and a emit / fix-first / consult-reader verdict."

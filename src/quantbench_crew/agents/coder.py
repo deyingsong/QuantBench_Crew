@@ -74,6 +74,23 @@ class QuantCoderAgent:
             return None
         return skill.run(ctx, analysis=analysis)
 
+    def consult_reader(
+        self, analysis: PaperAnalysis, ctx: "RunContext | None"
+    ) -> "SkillResult | None":
+        """Close MethodSpec gaps by consulting the Reader before coding.
+
+        Detects performance-affecting gaps in the extracted spec and, when the
+        skill is enabled, emits hypothesis-carrying questions for the Reader
+        (resolving them through the Reader backbone when configured). Returns
+        None when the skill is not enabled or no run context exists; the
+        workflow then proceeds on the spec as extracted, exactly as before.
+        """
+
+        skill = self.skills.get("consult_reader")
+        if skill is None or ctx is None:
+            return None
+        return skill.run(ctx, analysis=analysis)
+
 
 class _PlanGenerator:
     """Deterministic QuantBench generator compatible with ERA's interface."""

@@ -289,6 +289,9 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         if scored.relevance is not None:
             analysis = replace(analysis, relevance=scored.relevance)
         implementation_plan = coder.plan(analysis)
+        # Close performance-affecting MethodSpec gaps by consulting the Reader
+        # before any code is written (no-op unless the skill is enabled).
+        coder.consult_reader(analysis, ctx)
         codegen = coder.generate(analysis, implementation_plan, ctx)
         # Synthesize any paper-claimed metric the built-in suite lacks, so
         # the bench can claim-compare it (validated modules become artifacts).

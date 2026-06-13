@@ -165,6 +165,7 @@ from quantbench_crew.skills.bench import robustness_auditor as _bench_robustness
 from quantbench_crew.skills.bench import strategy_evaluator as _bench_strategy_evaluator  # noqa: E402,F401
 from quantbench_crew.skills.bench import walk_forward as _bench_walk_forward  # noqa: E402,F401
 from quantbench_crew.skills.coder import code_generation as _coder_code_generation  # noqa: E402,F401
+from quantbench_crew.skills.coder import consult_reader as _coder_consult_reader  # noqa: E402,F401
 from quantbench_crew.skills.coder import metric_synthesis as _coder_metric_synthesis  # noqa: E402,F401
 from quantbench_crew.skills.reader import criticizer as _reader_criticizer  # noqa: E402,F401
 from quantbench_crew.skills.reader import empirical_spec as _reader_empirical_spec  # noqa: E402,F401

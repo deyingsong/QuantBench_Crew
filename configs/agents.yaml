@@ -163,6 +163,13 @@ agents:
         enabled: true       # code paper-claimed metrics the suite lacks;
                             # offline-safe (skips with a note when no LLM)
         max_metrics: 3
+      consult_reader:
+        enabled: false      # close MethodSpec gaps by asking the Reader before
+                            # coding; emits questions as an artifact. Offline-safe:
+                            # deterministic gap detection needs no LLM.
+        confidence_threshold: 0.5
+        resolve: false      # when true, route questions to the Reader backbone
+                            # (quant_reader) for source-grounded answers
   quant_bench:
     role: Benchmark evaluation and robustness checks
     default_metrics:

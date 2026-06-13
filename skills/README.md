@@ -46,6 +46,21 @@ reviews through explicit quantitative expert lenses. Harnesses can discover
 them natively; `quant-reviewer/` carries their core rules for the default
 prompt-injection route.
 
+Coder has a craft-and-defense skill family, a cross-agent oracle, and adapted
+engineering discipline. Two transcript-distilled skills do the core work:
+`strategy-implementer/` for turning a MethodSpec into deterministic,
+leakage-free code against the Strategy/PanelData contract, and
+`backtest-pitfall-guard/` for catching look-ahead, overfitting, and selection
+bias at generation time. `consult-reader/` lets the Coder close MethodSpec gaps
+by asking the Reader agent instead of guessing — the cross-agent adaptation of
+agent-skills' `interview-me`/`idea-refine`, wired through the `consult_reader`
+Python skill and `QuantCoderAgent.consult_reader`. Six reskins
+(`coder-source-grounding/`, `coder-doubt-driven/`, `coder-test-first/`,
+`coder-incremental-implementation/`, `coder-debugging-recovery/`,
+`coder-self-review/`) adapt the production-engineering skills for strategy
+codegen. Harnesses can discover them natively; `quant-coder/` carries their
+core rules for the default prompt-injection route.
+
 `options-reader/` is a cross-agent domain-expert skill for equity-derivatives
 pricing, volatility surfaces, exotics, and hedging. Scout should identify and
 route papers whose central contribution falls in this domain; Reader or
@@ -68,6 +83,18 @@ domain; Reader or Reviewer can then invoke the skill for source-grounded
 extraction or adversarial domain critique. It is progressively disclosed
 through native skill discovery and is not injected into unrelated default API
 calls.
+
+## Vendored engineering library
+
+`engineering/` is a verbatim, MIT-licensed copy of
+[addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) — 24
+production-grade software-engineering skills plus its specialist agent personas
+and checklists, kept intact for attribution and re-sync (see
+[engineering/README.md](engineering/README.md)). The QuantBench-specific
+adaptations of the coder-relevant subset live as the `coder-*` and
+`consult-reader` skills above; the rest of the library is available to any
+standard-compliant agent host through native skill discovery but is not
+injected into default API calls.
 
 ## Editing
 

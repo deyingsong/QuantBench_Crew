@@ -1,0 +1,4 @@
+interface:
+  display_name: "Strategy Implementer"
+  short_description: "Turn a MethodSpec into leakage-free, contract-compliant strategy code"
+  default_prompt: "Use $strategy-implementer to translate this MethodSpec into a deterministic, no-lookahead Python module satisfying the Strategy/PanelData contract: build features from past data only, map the signal to target weights under the construction rule, time trades to the next bar, and handle warmup."

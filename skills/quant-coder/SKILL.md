@@ -55,5 +55,35 @@ The module must define `build_strategy(params=None)` returning an object with:
    weight; equal-weight legs must have uniform magnitudes; gross exposure
    stays <= 2x.
 
+## Coder skill family
+
+This SKILL.md is the contract. The craft, defenses, and gap-handling live in
+companion skills a harness discovers natively and whose core rules apply on
+every generation:
+
+- **[strategy-implementer](../strategy-implementer/SKILL.md)** — build features
+  from past data only, map the signal to weights under the construction rule,
+  time trades to the next bar, handle warmup with `{}`.
+- **[backtest-pitfall-guard](../backtest-pitfall-guard/SKILL.md)** — before
+  accepting a candidate, sweep for look-ahead and parameter leakage,
+  survivorship, in-sample tuning, and overfitting to the paper's claimed
+  number; record every trial.
+- **[consult-reader](../consult-reader/SKILL.md)** — when a performance-affecting
+  field is missing, vague, or low-confidence, ask the Reader instead of
+  guessing; adopt a neutral default only as a recorded assumption.
+- **coder-source-grounding / -doubt-driven / -test-first /
+  -incremental-implementation / -debugging-recovery / -self-review** — adapted
+  software-engineering discipline (see [engineering/](../engineering/README.md)).
+
+## Before you emit
+
+1. Point-in-time: every read goes through `data.up_to(as_of)`; nothing dated
+   after `as_of` is read or inferred.
+2. Estimated parameters are fit in `fit(...)` on `<= train_end` and frozen.
+3. Warmup returns `{}`; any randomness is seeded from `params`.
+4. No performance-affecting field was silently guessed; gaps went to
+   consult-reader and adopted defaults are recorded as assumptions.
+5. The code implements the method, not the paper's claimed metric.
+
 Output only the module source. Prefer the simplest faithful implementation of
 the extracted MethodSpec over cleverness.
