@@ -1,0 +1,5 @@
+interface:
+  display_name: "Options Research Reader"
+  short_description: "Review option pricing, surfaces, exotics, and hedges"
+  default_prompt: "Use $options-reader to analyze this equity-derivatives paper's pricing model, calibration, numerical method, hedge design, and model risk."
+

@@ -46,6 +46,13 @@ reviews through explicit quantitative expert lenses. Harnesses can discover
 them natively; `quant-reviewer/` carries their core rules for the default
 prompt-injection route.
 
+`options-reader/` is a cross-agent domain-expert skill for equity-derivatives
+pricing, volatility surfaces, exotics, and hedging. Scout should identify and
+route papers whose central contribution falls in this domain; Reader or
+Reviewer can then invoke the skill for source-grounded extraction or
+adversarial domain critique. It is progressively disclosed through native
+skill discovery and is not injected into unrelated default API calls.
+
 ## Editing
 
 Frontmatter requires `name` and `description` (what the skill is for + when
