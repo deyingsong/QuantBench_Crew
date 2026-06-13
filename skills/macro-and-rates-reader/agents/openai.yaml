@@ -1,0 +1,4 @@
+interface:
+  display_name: "Macro And Rates Research Reader"
+  short_description: "Review macro, policy, curves, and fixed income"
+  default_prompt: "Use $macro-and-rates-reader to analyze this macro or rates paper and its policy regime, curve assumptions, time-series identification, portfolio economics, and cross-cycle validity."
