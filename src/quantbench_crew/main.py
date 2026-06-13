@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from collections import Counter
+from collections.abc import Mapping
 from dataclasses import replace
+from datetime import date
 from pathlib import Path
+from typing import Any
 
 from quantbench_crew.agents import (
     QuantBenchAgent,
@@ -21,6 +26,10 @@ from quantbench_crew.models import ReviewReport
 from quantbench_crew.skills import resolve_skills
 from quantbench_crew.skills.base import RunContext
 from quantbench_crew.skills.scout.charter_relevance import load_charter, relevance_boost
+from quantbench_crew.skills.scout.relevance_scorer import (
+    RelevanceScorerSkill,
+    relevance_boost as research_value_boost,
+)
 from quantbench_crew.tools.arxiv_tool import (
     DEFAULT_PROCESSED_PATH,
     ProcessedRegistry,
@@ -31,6 +40,13 @@ from quantbench_crew.tools.query_pool import (
     format_query_pools,
     multi_query_search,
     resolve_pool,
+)
+from quantbench_crew.tools.paper_queue import (
+    DEFAULT_QUEUE_PATH,
+    ResearchQueue,
+    deduplicate_papers,
+    filter_by_online_date,
+    parse_iso_date,
 )
 from quantbench_crew.tools.venue_tool import (
     VENUE_GROUPS,
@@ -54,6 +70,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "queries":
         print(format_query_pools())
+        return 0
+    if args.command == "track":
+        print(json.dumps(track_new_papers(args), indent=2, sort_keys=True))
         return 0
 
     parser.print_help()
@@ -125,6 +144,29 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable dedup against already-processed papers (arxiv source).",
     )
+
+    track = subparsers.add_parser(
+        "track", help="Find papers in an exact online-date window and update Scout's queue."
+    )
+    track.add_argument(
+        "--source",
+        action="append",
+        choices=("local", "arxiv", *VENUES, *VENUE_GROUPS),
+        help=(
+            "Assigned source to scan; repeat for several sources. Defaults to "
+            "quant_scout.assigned_sources in the agents config."
+        ),
+    )
+    track_query = track.add_mutually_exclusive_group()
+    track_query.add_argument("--query", default="quantitative finance")
+    track_query.add_argument("--query-pool", default=None)
+    track.add_argument("--start-date", required=True, help="Inclusive YYYY-MM-DD online date.")
+    track.add_argument("--end-date", required=True, help="Inclusive YYYY-MM-DD online date.")
+    track.add_argument("--max-candidates-per-source", type=int, default=100)
+    track.add_argument("--max-papers", type=int, default=50, help="Maximum ranked papers to upsert.")
+    track.add_argument("--paper-json", help="Local JSON records when --source local is assigned.")
+    track.add_argument("--agents-config", default="configs/agents.yaml")
+    track.add_argument("--queue-path", default=str(DEFAULT_QUEUE_PATH))
 
     subparsers.add_parser(
         "queries", help="List the curated query pools usable with --query-pool."
@@ -207,7 +249,7 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         keywords=scout_keywords,
         skills=agent_skills["quant_scout"],
         charter=load_charter(agents_config),
-        relevance_boost=relevance_boost(agents_config),
+        relevance_boost=_configured_relevance_boost(agents_config),
     )
     reader = QuantReaderAgent(skills=agent_skills["quant_reader"])
     coder = QuantCoderAgent(skills=agent_skills["quant_coder"])
@@ -278,6 +320,146 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         write_reports(reports, Path(args.report_dir), strategy_sources)
 
     return reports
+
+
+def track_new_papers(args: argparse.Namespace) -> dict[str, object]:
+    """Discover, strictly date-filter, rank, and upsert Scout's paper queue."""
+
+    agents_config = load_config(args.agents_config)
+    scout_config = (agents_config.get("agents") or {}).get("quant_scout") or {}
+    sources = tuple(args.source or scout_config.get("assigned_sources") or ("arxiv",))
+    start_date = parse_iso_date(args.start_date, "start-date")
+    end_date = parse_iso_date(args.end_date, "end-date")
+    if start_date > end_date:
+        raise ValueError("start-date must be on or before end-date")
+
+    candidates: list = []
+    for source in sources:
+        candidates.extend(_discover_for_tracking(source, args, start_date, end_date))
+    unique = deduplicate_papers(candidates)
+    filtered = filter_by_online_date(unique, start_date, end_date)
+    source_counts = Counter(paper.source for paper in candidates)
+    source_failures = sorted(
+        source.removesuffix("-placeholder")
+        for source in source_counts
+        if source.endswith("-placeholder")
+    )
+
+    scout = QuantScoutAgent(
+        keywords=(),
+        skills={"relevance_scorer": RelevanceScorerSkill()},
+        charter=load_charter(agents_config),
+        relevance_boost=1.0,
+    )
+    ranked = scout.rank(filtered.in_window, max_papers=args.max_papers)
+    queue = ResearchQueue(args.queue_path)
+    update = queue.upsert(ranked, start_date, end_date)
+    queue_path = queue.save()
+
+    return {
+        "window": {"start": start_date.isoformat(), "end": end_date.isoformat()},
+        "sources": list(sources),
+        "source_counts": dict(sorted(source_counts.items())),
+        "source_failures": source_failures,
+        "discovered": len(candidates),
+        "unique": len(unique),
+        "in_window": len(filtered.in_window),
+        "outside_window": len(filtered.outside_window),
+        "missing_exact_online_date": len(filtered.missing_exact_date),
+        "queue": {
+            "path": str(queue_path),
+            "added": update.added,
+            "updated": update.updated,
+            "total": update.total,
+        },
+        "ranked": [
+            {
+                "rank": index,
+                "title": scored.paper.title,
+                "score": round(scored.score, 4),
+                "research_value": round(scored.relevance.score, 4)
+                if scored.relevance
+                else None,
+            }
+            for index, scored in enumerate(ranked, start=1)
+        ],
+    }
+
+
+def _discover_for_tracking(
+    source: str, args: argparse.Namespace, start_date: date, end_date: date
+) -> list:
+    """Fetch a bounded candidate set from one assigned source."""
+
+    budget = max(1, args.max_candidates_per_source)
+    query_pool = getattr(args, "query_pool", None)
+    if source == "local":
+        return load_local_papers(args.paper_json)
+    if source == "arxiv":
+        if query_pool:
+            return multi_query_search(
+                lambda query, per_query: search_arxiv(
+                    query,
+                    max_results=per_query,
+                    start_date=start_date,
+                    end_date=end_date,
+                ),
+                resolve_pool(query_pool),
+                budget,
+                delay=0.5,
+            )
+        return search_arxiv(
+            args.query,
+            max_results=budget,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    venue_keys = expand_source(source)
+    if not venue_keys:
+        return []
+    if all(VENUES[venue]["kind"] == "journal" for venue in venue_keys):
+        if query_pool:
+            return search_venues_pooled(
+                venue_keys,
+                query_pool,
+                max_results=budget,
+                start_date=start_date,
+                end_date=end_date,
+            )
+        return search_venues(
+            venue_keys,
+            args.query,
+            max_results=budget,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    papers = []
+    for year in range(start_date.year, end_date.year + 1):
+        if query_pool:
+            papers.extend(
+                search_venues_pooled(
+                    venue_keys,
+                    query_pool,
+                    max_results=budget,
+                    year=year,
+                )
+            )
+        else:
+            papers.extend(
+                search_venues(venue_keys, args.query, max_results=budget, year=year)
+            )
+    return papers
+
+
+def _configured_relevance_boost(config: Mapping[str, Any]) -> float:
+    scout = (config.get("agents") or {}).get("quant_scout") or {}
+    skills = scout.get("skills") or {}
+    scorer = skills.get("relevance_scorer") or {}
+    if scorer.get("enabled", False):
+        return research_value_boost(config)
+    return relevance_boost(config)
 
 
 def write_reports(

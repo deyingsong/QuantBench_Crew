@@ -1,0 +1,4 @@
+interface:
+  display_name: "New Paper Tracker"
+  short_description: "Track fresh papers into a ranked queue"
+  default_prompt: "Use $new-paper-tracker to find and queue papers published in an explicit date window."

@@ -20,6 +20,12 @@ Skill-to-agent mapping lives in `quantbench_crew/agent_skills.py`
 (`quant_scout -> quant-scout/`, etc.). A missing SKILL.md disables injection
 for that agent only — nothing errors.
 
+Scout also has two task-focused open-format skills:
+`new-paper-tracker/` for date-window surveillance and durable queue updates,
+and `relevance-scorer/` for transcript-distilled research-value ranking.
+Harnesses can discover them natively; `quant-scout/` carries their core rules
+for the default prompt-injection route.
+
 ## Editing
 
 Frontmatter requires `name` and `description` (what the skill is for + when

@@ -1,7 +1,7 @@
 """Conference and journal paper sources (beyond arXiv).
 
-Two keyless metadata backends, each verified live and each behind an
-injectable fetcher so tests replay recorded JSON offline:
+Two metadata backends, each behind an injectable fetcher so tests replay
+recorded JSON offline:
 
 - **Conferences** (KDD, ICML, ICLR, WSDM, AAAI, IJCAI, ACM Web Conference,
   NeurIPS) — DBLP's publication search filtered by the venue's canonical
@@ -10,7 +10,8 @@ injectable fetcher so tests replay recorded JSON offline:
   that fills abstracts and open-access PDF URLs where available.
 - **Journals** (Journal of Finance, Journal of Financial Economics, Review of
   Financial Studies) — OpenAlex works search filtered by the journal's ISSN,
-  with abstracts reconstructed from ``abstract_inverted_index``.
+  with abstracts reconstructed from ``abstract_inverted_index``. The current
+  API key is read from ``OPENALEX_API_KEY`` when available.
 
 Failures fall back to deterministic offline placeholder records, mirroring
 the arXiv source, so the workflow always runs.
@@ -18,6 +19,7 @@ the arXiv source, so the workflow always runs.
 
 from __future__ import annotations
 
+import os
 import sys
 import urllib.parse
 from datetime import date
@@ -28,6 +30,7 @@ from quantbench_crew.tools.arxiv_tool import Fetcher, _http_get
 
 DBLP_API_URL = "https://dblp.org/search/publ/api"
 OPENALEX_WORKS_URL = "https://api.openalex.org/works"
+OPENALEX_API_KEY_ENV = "OPENALEX_API_KEY"
 
 # venue key -> spec. Conference stream ids are DBLP's canonical streams;
 # journal ISSNs were verified against OpenAlex live (JF/JFE/RFS).
@@ -57,6 +60,8 @@ def search_venue(
     max_results: int = 5,
     fetcher: Fetcher | None = None,
     year: int | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
 ) -> list[Paper]:
     """Search one venue; deterministic placeholders on network failure."""
 
@@ -66,7 +71,9 @@ def search_venue(
     fetch = fetcher or _http_get
     try:
         if spec["kind"] == "journal":
-            return _search_openalex_journal(spec, venue, query, max_results, fetch, year)
+            return _search_openalex_journal(
+                spec, venue, query, max_results, fetch, year, start_date, end_date
+            )
         return _search_dblp_conference(spec, venue, query, max_results, fetch, year)
     except (OSError, ValueError, KeyError) as exc:
         print(
@@ -83,6 +90,8 @@ def search_venues(
     max_results: int = 5,
     fetcher: Fetcher | None = None,
     year: int | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
 ) -> list[Paper]:
     """Search several venues, splitting the budget roughly evenly."""
 
@@ -91,7 +100,11 @@ def search_venues(
     per_venue = max(1, max_results // len(venues))
     papers: list[Paper] = []
     for venue in venues:
-        papers.extend(search_venue(venue, query, per_venue, fetcher, year))
+        papers.extend(
+            search_venue(
+                venue, query, per_venue, fetcher, year, start_date, end_date
+            )
+        )
     return papers[:max_results]
 
 
@@ -111,6 +124,8 @@ def search_venues_pooled(
     max_results: int = 5,
     fetcher: Fetcher | None = None,
     year: int | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
 ) -> list[Paper]:
     """Search venues with a query-pool selector instead of one query.
 
@@ -129,7 +144,9 @@ def search_venues_pooled(
         terms = resolve_pool(pool_selector, venue=venue)
         papers.extend(
             multi_query_search(
-                lambda query, budget, _v=venue: search_venue(_v, query, budget, fetcher, year),
+                lambda query, budget, _v=venue: search_venue(
+                    _v, query, budget, fetcher, year, start_date, end_date
+                ),
                 terms,
                 per_venue,
                 delay=0.4 if fetcher is None else 0.0,
@@ -195,6 +212,7 @@ def _search_dblp_conference(
                     "doi": str(info.get("doi") or ""),
                     "dblp_key": str(info.get("key") or ""),
                     "year": hit_year,
+                    "date_precision": "year",
                 },
             )
         )
@@ -220,8 +238,8 @@ def _enrich_with_openalex(papers: list[Paper], fetch: Fetcher) -> list[Paper]:
     dois = [p.raw["doi"].lower() for p in papers if p.raw.get("doi")]
     if not dois:
         return papers
-    url = (
-        f"{OPENALEX_WORKS_URL}?per-page=50&filter="
+    url = _with_openalex_api_key(
+        f"{OPENALEX_WORKS_URL}?per_page=50&filter="
         + urllib.parse.quote("doi:" + "|".join(dois[:50]))
     )
     try:
@@ -265,13 +283,17 @@ def _enrich_with_openalex(papers: list[Paper], fetch: Fetcher) -> list[Paper]:
 
 def _search_openalex_journal(
     spec: dict[str, str], venue: str, query: str, max_results: int,
-    fetch: Fetcher, year: int | None,
+    fetch: Fetcher, year: int | None, start_date: date | None, end_date: date | None,
 ) -> list[Paper]:
     filters = [f"primary_location.source.issn:{spec['issn']}"]
     if year is not None:
         filters.append(f"publication_year:{year}")
-    url = (
-        f"{OPENALEX_WORKS_URL}?per-page={min(max_results, 50)}"
+    if start_date is not None:
+        filters.append(f"from_publication_date:{start_date.isoformat()}")
+    if end_date is not None:
+        filters.append(f"to_publication_date:{end_date.isoformat()}")
+    url = _with_openalex_api_key(
+        f"{OPENALEX_WORKS_URL}?per_page={min(max_results, 50)}"
         f"&search={urllib.parse.quote(query)}"
         f"&filter={urllib.parse.quote(','.join(filters))}"
     )
@@ -286,6 +308,7 @@ def _search_openalex_journal(
             "doi": doi,
             "openalex_id": str(work.get("id") or ""),
             "year": work.get("publication_year"),
+            "date_precision": "day",
         }
         if oa_url:
             raw["pdf_url"] = oa_url
@@ -316,6 +339,15 @@ def _abstract_from_inverted_index(index: dict[str, list[int]] | None) -> str:
     for word, slots in index.items():
         positions.extend((slot, word) for slot in slots)
     return " ".join(word for _, word in sorted(positions))
+
+
+def _with_openalex_api_key(url: str) -> str:
+    """Attach the current OpenAlex API key when configured."""
+
+    key = os.getenv(OPENALEX_API_KEY_ENV, "").strip()
+    if not key:
+        return url
+    return f"{url}&api_key={urllib.parse.quote(key)}"
 
 
 def _parse_iso_date(value: Any) -> date | None:

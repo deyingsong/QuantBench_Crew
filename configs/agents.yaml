@@ -63,6 +63,9 @@ llm:
 agents:
   quant_scout:
     role: Paper discovery and relevance ranking
+    assigned_sources:
+      - arxiv
+      - journals
     default_keywords:
       - asset pricing
       - portfolio
@@ -88,6 +91,9 @@ agents:
       arxiv_search:
         enabled: false
       charter_relevance:
+        enabled: false
+        relevance_boost: 10.0
+      relevance_scorer:
         enabled: false
         relevance_boost: 10.0
       reproducibility_triage:

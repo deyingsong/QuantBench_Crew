@@ -1,6 +1,8 @@
 """Conference/journal sources: DBLP + OpenAlex adapters, offline."""
 
 import json
+import urllib.parse
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -196,3 +198,37 @@ def test_processed_registry_dedups_on_doi(tmp_path: Path) -> None:
     # Same DOI under a different title (e.g. DBLP vs publisher casing) is seen.
     same_doi = Paper(title="A TITLE (extended)", abstract="", raw={"doi": "10.1145/x.y"})
     assert registry.is_seen(same_doi)
+
+
+def test_openalex_journal_query_includes_exact_date_window() -> None:
+    requested: list[str] = []
+
+    def fetch(url: str) -> bytes:
+        requested.append(url)
+        return _openalex_payload([])
+
+    search_venue(
+        "jfe",
+        "momentum",
+        fetcher=fetch,
+        start_date=date(2026, 5, 31),
+        end_date=date(2026, 6, 10),
+    )
+
+    decoded = urllib.parse.unquote(requested[0])
+    assert "from_publication_date:2026-05-31" in decoded
+    assert "to_publication_date:2026-06-10" in decoded
+
+
+def test_openalex_query_uses_configured_api_key(monkeypatch) -> None:
+    requested: list[str] = []
+    monkeypatch.setenv("OPENALEX_API_KEY", "free key")
+
+    search_venue(
+        "jfe",
+        "momentum",
+        fetcher=lambda url: requested.append(url) or _openalex_payload([]),
+    )
+
+    assert "api_key=free%20key" in requested[0]
+    assert "per_page=" in requested[0]

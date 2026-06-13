@@ -147,12 +147,31 @@ quantbench run --source jfe --query "momentum" --max-papers 3
 quantbench run --source conferences --query "return prediction" --max-papers 8
 ```
 
+**Track fresh papers without running the full reproduction pipeline:**
+
+```bash
+quantbench track \
+  --start-date 2026-05-31 \
+  --end-date 2026-06-10 \
+  --source arxiv \
+  --source journals \
+  --query-pool auto
+```
+
+`track` strictly filters on day-level online dates, deduplicates across
+sources, ranks with Scout's research-value scorer, and upserts
+`data/processed/paper_queue.json` while preserving prior human status and
+notes. Sources that only expose a year are reported as missing an exact date
+instead of being silently included.
+
 Conferences (KDD, ICML, ICLR, WSDM, AAAI, IJCAI, WWW, NeurIPS) are searched
 via DBLP's canonical venue streams, with abstracts and open-access PDF links
 enriched from OpenAlex in one batched DOI lookup; journals (Journal of
 Finance, Journal of Financial Economics, Review of Financial Studies) are
-searched via OpenAlex filtered by ISSN. Both backends are keyless; on network
-failure each source falls back to deterministic offline placeholders.
+searched via OpenAlex filtered by ISSN. DBLP is keyless; OpenAlex now expects
+a free `OPENALEX_API_KEY` for useful API quota. Without one the adapter still
+attempts the request, and every source falls back to deterministic offline
+placeholders when the network or provider rejects it.
 
 Two search-semantics notes: conference queries match paper **titles** (DBLP
 indexes titles, not abstracts), so prefer short title-like terms ("portfolio",
@@ -272,6 +291,7 @@ which is on by default so reports ship a generated strategy module):
 | Agent | Skill | When enabled |
 | --- | --- | --- |
 | scout | `charter_relevance` | score candidates against the research charter; boost ranking |
+| scout | `relevance_scorer` | multi-dimensional research-value ranking: charter fit, evidence, implementability, economics, and information gain |
 | scout | `reproducibility_triage` | data-tier classification (public/vendor/proprietary) + feasibility score; gates papers below `threshold` |
 | reader | `pdf_acquisition` | resolve arXiv URL → cached PDF under `cache_dir` so PaperQA2 engages |
 | reader | `method_spec_extraction` | schema-validated MethodSpec (LLM/full-text → metadata fallback), confidence recorded |

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Relevance Scorer"
+  short_description: "Rank papers by likely research value"
+  default_prompt: "Use $relevance-scorer to rank candidate papers for downstream quantitative research."

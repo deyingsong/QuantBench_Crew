@@ -22,21 +22,20 @@ class QuantScoutAgent:
         self.skills = dict(skills or {})
         self.charter = charter
         self.relevance_boost = relevance_boost
-        self.keywords = tuple(
-            keyword.lower()
-            for keyword in (
-                keywords
-                or (
-                    "asset pricing",
-                    "portfolio",
-                    "market microstructure",
-                    "forecasting",
-                    "risk",
-                    "machine learning",
-                    "quantitative finance",
-                )
+        selected_keywords = (
+            (
+                "asset pricing",
+                "portfolio",
+                "market microstructure",
+                "forecasting",
+                "risk",
+                "machine learning",
+                "quantitative finance",
             )
+            if keywords is None
+            else keywords
         )
+        self.keywords = tuple(keyword.lower() for keyword in selected_keywords)
 
     def rank(self, papers: Iterable[Paper], max_papers: int = 5) -> list[ScoredPaper]:
         scored = [self._score(paper) for paper in papers]
@@ -60,7 +59,7 @@ class QuantScoutAgent:
     ) -> "SkillResult | None":
         """Record the charter-relevance assessment for a ranked paper."""
 
-        skill = self.skills.get("charter_relevance")
+        skill = self.skills.get("relevance_scorer") or self.skills.get("charter_relevance")
         if skill is None or ctx is None or scored.relevance is None:
             return None
         return skill.run(ctx, paper=scored.paper, relevance=scored.relevance)
@@ -79,6 +78,10 @@ class QuantScoutAgent:
         return ScoredPaper(paper=paper, score=score, reasons=reasons, relevance=relevance)
 
     def _relevance(self, paper: Paper) -> RelevanceAssessment | None:
+        if "relevance_scorer" in self.skills:
+            from quantbench_crew.skills.scout.relevance_scorer import assess_research_value
+
+            return assess_research_value(paper, self.charter)
         if self.charter is None or "charter_relevance" not in self.skills:
             return None
         from quantbench_crew.skills.scout.charter_relevance import assess_relevance

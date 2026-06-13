@@ -65,6 +65,10 @@ class RelevanceAssessment:
     method: str                          # "embedding" | "charter_overlap"
     matched_themes: tuple[str, ...] = ()
     rationale: str = ""
+    dimensions: dict[str, float] = field(default_factory=dict)
+    signals: tuple[str, ...] = ()
+    penalties: tuple[str, ...] = ()
+    confidence: float = 0.0
 
 
 @dataclass(frozen=True)

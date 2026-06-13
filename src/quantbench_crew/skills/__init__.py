@@ -170,4 +170,5 @@ from quantbench_crew.skills.reader import red_flag as _reader_red_flag  # noqa: 
 from quantbench_crew.skills.reader import target_table as _reader_target_table  # noqa: E402,F401
 from quantbench_crew.skills.reviewer import rubric as _reviewer_rubric  # noqa: E402,F401
 from quantbench_crew.skills.scout import charter_relevance as _scout_charter_relevance  # noqa: E402,F401
+from quantbench_crew.skills.scout import relevance_scorer as _scout_relevance_scorer  # noqa: E402,F401
 from quantbench_crew.skills.scout import triage as _scout_triage  # noqa: E402,F401

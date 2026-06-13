@@ -164,6 +164,8 @@ def paper_from_record(record: dict[str, object], source: str = "local") -> Paper
     abstract = str(record.get("abstract") or record.get("summary") or "")
     authors_value = record.get("authors") or ()
     keywords_value = record.get("keywords") or ()
+    published_value = record.get("online_date") or record.get("published")
+    published = _parse_date(str(published_value)) if published_value else None
 
     return Paper(
         title=title,
@@ -171,6 +173,7 @@ def paper_from_record(record: dict[str, object], source: str = "local") -> Paper
         authors=tuple(str(author) for author in _as_sequence(authors_value)),
         source=str(record.get("source") or source),
         url=str(record["url"]) if record.get("url") else None,
+        published=published,
         keywords=tuple(str(keyword) for keyword in _as_sequence(keywords_value)),
         raw=dict(record),
     )
