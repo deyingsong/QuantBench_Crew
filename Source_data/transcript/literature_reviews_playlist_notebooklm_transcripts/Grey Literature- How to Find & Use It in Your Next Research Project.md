@@ -1,0 +1,15 @@
+---
+title: "Grey Literature: How to Find & Use It in Your Next Research Project"
+video_id: "8gKZ9d2vNSo"
+url: "https://www.youtube.com/watch?v=8gKZ9d2vNSo"
+duration: ""
+source: "NotebookLM YouTube transcript import"
+---
+
+# Grey Literature: How to Find & Use It in Your Next Research Project
+
+[Watch on YouTube](https://www.youtube.com/watch?v=8gKZ9d2vNSo)
+
+## Transcript
+
+If you don't know what grey literature is, or how to find it, your systematic review or research project is probably incomplete. Which raises the question, What is grey literature? In short, grey lit is information generated outside traditional academic and commercial publishing. More important for you, grey literature is usually not available via conventional search engines like Google or the subject directories you're most familiar with. So, what exactly are you missing? Here at the home page of GreyNet International you'll find the answer with this list of over 150 document types associated with grey literature. As you can see, many of these document types do not show up in a traditional search engine query. So, be sure to bookmark this important site for future reference. The many document types and databases you see here suggest the broad scope of grey literature, which includes reports, studies, papers, data sets and databases, fact sheets, flyers and folders, green papers and guidebooks, lectures, not widely available on the open web. This next page includes a comprehensive list of 62 databases from all over the world that archive grey literature. Many academic libraries also provide access to grey literature databases.Fortunately, there are several search engines dedicated to exploring these grey literature databases. Again, if you plan on including grey literature in your search, be sure to document this important site. OAIster maintains a database of open-access works from over 2000 databases worldwide. Let's search on the broad topic of "East African droughts." As you see, OAIster searches its databases and provides 224 results, which include theses and dissertations, eBooks, downloadable archival material, computer files, and much more from libraries around the world. Finally, one advantage of grey literature is that it can be more current than what is often found in traditional publishing databases. This advantage isn't surprising since grey literature by-passes many of the delays and restrictions of commercial and traditional academic presses.However, the downside of this speed is that quality can suffer because the peer review process may be shortened or even skipped. Nonetheless, keeping an eye on the quality of your sources would seem to be a universal caution for any researcher, regardless of the database.Although the explosion of open-access, grey literature certainly complicates the researcher's job, it has also led to the formation of worldwide efforts to provide access to grey literature.Be sure to check out the description box below for a list of links discussed in this video.
