@@ -7,7 +7,7 @@ Total public videos: 23
 
 1. [5 Things Experts don't tell you about doing a PhD](https://www.youtube.com/watch?v=Nt4PbfA4nJE)
 2. [5 Magical Apps for PhD Students](https://www.youtube.com/watch?v=7mAgA28HWxE)
-3. [Get more done without spending more time - PhD student](https://www.youtube.com/watch?v=Mt3WIn-OhPA
+3. [Get more done without spending more time - PhD student](https://www.youtube.com/watch?v=Mt3WIn-OhPA)
 4. [How To Read Papers Fast & Effectively - PhD student](https://www.youtube.com/watch?v=EXALI6jFu6E)
 5. [Productivity, Motivation and Hardships - Q&A with a Computational Neuroscience Graduate Student](https://www.youtube.com/watch?v=SulHJ1SIM_g)
 6. [How to Optimize for Peak Study Performance - PhD student](https://www.youtube.com/watch?v=24SAYxR7X94)
