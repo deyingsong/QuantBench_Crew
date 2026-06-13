@@ -199,10 +199,19 @@ def test_golden_paper_flows_through_enabled_skills(tmp_path: Path) -> None:
         "target_table_extraction",
         "red_flag_scan",
         "code_generation",
+        "metric_synthesis",
         "dataset_registry",
         "walk_forward",
         "rubric_verdict",
     }
+    # The golden paper's claim (monthly_return) is covered by the built-in
+    # suite, so metric synthesis correctly records a no-op.
+    synthesis = next(
+        entry for entry in manifest["skill_results"]
+        if entry["skill"] == "metric_synthesis"
+    )
+    assert synthesis["status"] == "skipped"
+    assert synthesis["payload"]["missing"] == []
     triage = next(
         entry for entry in manifest["skill_results"]
         if entry["skill"] == "reproducibility_triage"

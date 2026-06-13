@@ -278,6 +278,7 @@ which is on by default so reports ship a generated strategy module):
 | reader | `target_table_extraction` | enumerate falsifiable claims into a ReproductionTarget with tolerance bands |
 | reader | `red_flag_scan` | detect quant pitfalls (no costs, in-sample tuning, survivorship, microcaps, short sample, snooping) |
 | coder | `code_generation` | ERA search over candidate modules; `adapter: complete` (single-shot LLM) or `agent` (headless Claude Code, used when available, otherwise falls back) |
+| coder | `metric_synthesis` | code paper-claimed metrics the built-in suite lacks; sandbox-validated, then computed by the bench on the OOS returns (`max_metrics` caps spend) |
 | bench | `dataset_registry` | load + provenance-hash the configured `dataset` into the manifest |
 | bench | `walk_forward` | purged/embargoed walk-forward vs baselines; deflated Sharpe; spanning (set `factors_path`); claim comparison |
 | reviewer | `rubric_verdict` | evidence-linked rubric + red-team checklist → honest verdict |
@@ -321,8 +322,16 @@ buy-and-hold, and a **random-matched-turnover null** — random selection with
 the candidate's sizing, so it pays the same costs while carrying no signal.
 
 Metrics are frequency-aware (monthly data annualizes with √12, not √252) and
-net of a linear cost model (`cost_bps` per unit turnover). On top of the raw
-metrics:
+net of a linear cost model (`cost_bps` per unit turnover). The built-in suite
+computed on every walk-forward (net series unless noted): mean return,
+volatility, Sharpe, **annualized return**, **maximum drawdown**, **Calmar
+ratio**, **Sortino ratio**, **expected shortfall** (CVaR, 5% tail),
+**directional accuracy** (hit rate), **profit factor**, **tail ratio**
+(|q95|/|q5|), **gross PnL** and **net PnL** (cumulative, unit-notional),
+average turnover, and the **position distribution** (average long/short
+position counts and weight concentration). Paper claims map onto these via a
+generous alias table (e.g. `CVaR`, `MDD`, `hit rate`, `PnL` all resolve), so
+a paper quoting any of them is claim-compared immediately. On top:
 
 - **Deflated Sharpe ratio** (Bailey–López de Prado): haircuts the observed
   Sharpe by the manifest's trial count and trial dispersion; reported with a
@@ -334,6 +343,14 @@ metrics:
 - **Claim comparison**: achieved metrics vs the paper's extracted claims
   within per-claim tolerance bands — reported as a sanity band, never used as
   an optimization objective.
+- **Metric synthesis** (coder procedure): when a paper claims a metric the
+  suite doesn't know (say, an Omega ratio), the coder's backbone generates a
+  `compute_metric(returns, periods_per_year)` module for it, the sandbox
+  AST-gates and validates it on a fixed series, and the bench executes it —
+  sandboxed, never host-side — on the candidate's out-of-sample net returns.
+  The value lands in the achieved metrics under the claim's normalized name,
+  so the claim still gets compared. Offline (no coder LLM), the gap is
+  recorded honestly instead: "no achieved metric mapped".
 
 The reviewer only says **promising** when the candidate beats the random
 null, survives deflation, is sign-stable across subsamples, and carries no
