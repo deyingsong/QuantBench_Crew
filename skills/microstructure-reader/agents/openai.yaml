@@ -1,0 +1,4 @@
+interface:
+  display_name: "Microstructure Research Reader"
+  short_description: "Review HFT, liquidity, impact, and execution"
+  default_prompt: "Use $microstructure-reader to analyze this market-microstructure paper and its tick data, venue assumptions, execution realism, impact evidence, and cross-regime validity."

@@ -53,6 +53,14 @@ Reviewer can then invoke the skill for source-grounded extraction or
 adversarial domain critique. It is progressively disclosed through native
 skill discovery and is not injected into unrelated default API calls.
 
+`microstructure-reader/` is a cross-agent domain-expert skill for HFT,
+tick-data, market-making, market-impact, execution, liquidity, and venue-design
+research. Scout should identify and route papers whose central contribution
+falls in this domain; Reader or Reviewer can then invoke the skill for
+source-grounded extraction or adversarial domain critique. It is progressively
+disclosed through native skill discovery and is not injected into unrelated
+default API calls.
+
 ## Editing
 
 Frontmatter requires `name` and `description` (what the skill is for + when
