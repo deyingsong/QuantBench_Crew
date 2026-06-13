@@ -184,6 +184,28 @@ agents:
         # Optional FF5+momentum factors CSV (YYYYMM + factor columns, percent)
         # for the spanning regression; spanning is skipped when unset/absent.
         factors_path: ""
+      strategy_evaluator:
+        enabled: false
+        primary_expect_edge: true
+        datasets:
+          - experiment: planted-alternate-seed
+            name: planted_momentum
+            params:
+              seed: 1
+            expect_edge: true
+          - experiment: pure-noise-null
+            name: pure_noise
+            params:
+              seed: 0
+            expect_edge: false
+      robustness_auditor:
+        enabled: false
+        cost_bps_scenarios:
+          - 10.0
+          - 25.0
+          - 50.0
+        max_parameter_sharpe_spread: 1.5
+        max_deflated_sharpe_p_value: 0.1
   quant_reviewer:
     role: Research synthesis and final review
     verdicts:

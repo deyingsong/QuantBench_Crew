@@ -8,6 +8,7 @@ from quantbench_crew.models import (
     CritiqueAssessment,
     EmpiricalSpecification,
     EvidenceLink,
+    ExperimentResult,
     ImplementationPlan,
     MethodSpec,
     MethodologyAssessment,
@@ -15,8 +16,10 @@ from quantbench_crew.models import (
     PaperAnalysis,
     ResearchQuestionAssessment,
     ReproductionTarget,
+    RobustnessAudit,
     ReviewReport,
     RubricScore,
+    StrategyEvaluation,
     StrategyArtifact,
 )
 
@@ -105,6 +108,8 @@ def test_existing_models_gain_additive_defaults() -> None:
     assert analysis.empirical_spec is None
     assert analysis.critique is None
     assert result.comparisons == ()
+    assert result.strategy_evaluation is None
+    assert result.robustness_audit is None
     assert report.rubric == ()
 
 
@@ -122,6 +127,32 @@ def test_reader_assessment_models_construct() -> None:
     assert methodology.equations == ()
     assert empirical.datasets == ("CRSP",)
     assert critique.reader_inferred_threats == ("possible leakage",)
+
+
+def test_bench_evaluation_and_audit_models_construct() -> None:
+    paper = _paper()
+    experiment = ExperimentResult(
+        name="noise-null",
+        dataset="pure_noise",
+        expect_edge=False,
+        passed=True,
+        metrics={"sharpe": -0.2},
+    )
+    evaluation = StrategyEvaluation(
+        paper=paper, experiments=(experiment,), passed_all=True, pass_rate=1.0
+    )
+    audit = RobustnessAudit(
+        experiments=(experiment,),
+        passed_checks=("noise_rejection",),
+        failed_checks=(),
+        unavailable_checks=(),
+        configuration_hash="config",
+        results_hash="results",
+        robust=True,
+    )
+
+    assert evaluation.experiments[0].passed
+    assert audit.robust
 
 
 def test_rubric_score_carries_evidence() -> None:

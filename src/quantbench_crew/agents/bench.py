@@ -10,6 +10,10 @@ from quantbench_crew.benchmarks.statistics import capacity_from_dict, deflated_f
 from quantbench_crew.datasets.registry import load_dataset
 from quantbench_crew.models import BenchmarkResult, ImplementationPlan, PaperAnalysis
 from quantbench_crew.skills.base import RunContext, Skill, skill_settings
+from quantbench_crew.skills.bench.robustness_auditor import robustness_audit_from_payload
+from quantbench_crew.skills.bench.strategy_evaluator import (
+    strategy_evaluation_from_payload,
+)
 from quantbench_crew.tools.evaluator import evaluate_returns
 
 
@@ -69,6 +73,37 @@ class QuantBenchAgent:
             ctx, dataset=loaded, spec=spec, target=target
         )
 
+        strategy_evaluation = None
+        strategy_payload: dict = {}
+        strategy_skill = self.skills.get("strategy_evaluator")
+        if strategy_skill is not None:
+            strategy_result = strategy_skill.run(
+                ctx,
+                dataset=loaded,
+                spec=spec,
+                target=target,
+                primary_payload=wf.payload,
+            )
+            strategy_payload = dict(
+                strategy_result.payload.get("strategy_evaluation") or {}
+            )
+            strategy_evaluation = strategy_evaluation_from_payload(
+                plan.paper, strategy_result.payload
+            )
+
+        robustness_audit = None
+        audit_skill = self.skills.get("robustness_auditor")
+        if audit_skill is not None:
+            audit_result = audit_skill.run(
+                ctx,
+                dataset=loaded,
+                spec=spec,
+                target=target,
+                primary_payload=wf.payload,
+                strategy_evaluation=strategy_payload,
+            )
+            robustness_audit = robustness_audit_from_payload(audit_result.payload)
+
         metrics = {key: float(value) for key, value in wf.payload["metrics"].items()}
         baselines = {
             name: {key: float(value) for key, value in baseline.items()}
@@ -103,4 +138,6 @@ class QuantBenchAgent:
             deflated_sharpe=deflated,
             capacity=capacity,
             spanning=spanning,
+            strategy_evaluation=strategy_evaluation,
+            robustness_audit=robustness_audit,
         )

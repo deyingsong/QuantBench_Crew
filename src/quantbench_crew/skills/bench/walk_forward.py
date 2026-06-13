@@ -64,8 +64,37 @@ class WalkForwardSkill:
         dataset: LoadedDataset = inputs["dataset"]
         spec: MethodSpec | None = inputs.get("spec")
         target = inputs.get("target")
-        settings = skill_settings(ctx.config, "quant_bench", self.name)
+        settings = {
+            **skill_settings(ctx.config, "quant_bench", self.name),
+            **dict(inputs.get("settings_override") or {}),
+        }
+        payload, notes = self.evaluate(ctx, dataset, spec=spec, target=target, settings=settings)
 
+        store = ArtifactStore(ctx.run_dir, ctx.manifest)
+        store.write_json("benchmark/walk_forward.json", payload)
+
+        result = SkillResult(
+            skill=self.name,
+            status="ok" if payload["n_windows"] else "skipped",
+            payload=payload,
+            artifacts=("benchmark/walk_forward.json",),
+            notes=notes,
+        )
+        ctx.manifest.record_skill(result)
+        return result
+
+    def evaluate(
+        self,
+        ctx: RunContext,
+        dataset: LoadedDataset,
+        *,
+        spec: MethodSpec | None = None,
+        target: Any = None,
+        settings: dict[str, Any] | None = None,
+    ) -> tuple[dict[str, Any], tuple[str, ...]]:
+        """Evaluate one dataset without recording a skill result or artifact."""
+
+        settings = dict(settings or skill_settings(ctx.config, "quant_bench", self.name))
         strategy_name = str(settings.get("strategy", "momentum"))
         params = {**_strategy_params(spec), **dict(settings.get("strategy_params", {}))}
         train_periods = int(settings.get("train_periods", DEFAULTS["train_periods"]))
@@ -127,6 +156,16 @@ class WalkForwardSkill:
             "dataset": dataset.name,
             "frequency": freq,
             "n_windows": len(windows),
+            "configuration": {
+                "strategy": strategy_name,
+                "strategy_params": params,
+                "train_periods": train_periods,
+                "test_periods": test_periods,
+                "purge": purge,
+                "embargo": embargo,
+                "cost_bps": cost_bps,
+                "factors_path": str(settings.get("factors_path") or ""),
+            },
             "metrics": candidate_metrics,
             "baselines": baseline_metrics,
             "beats_random_null": beats_null,
@@ -147,25 +186,15 @@ class WalkForwardSkill:
                 )
             },
         }
-        store = ArtifactStore(ctx.run_dir, ctx.manifest)
-        store.write_json("benchmark/walk_forward.json", payload)
-
-        result = SkillResult(
-            skill=self.name,
-            status="ok" if windows else "skipped",
-            payload=payload,
-            artifacts=("benchmark/walk_forward.json",),
-            notes=(
-                f"{len(windows)} walk-forward windows on {dataset.name!r}",
-                f"candidate sharpe {candidate_metrics['sharpe']:.3f} vs random null "
-                f"{null_sharpe:.3f}: {'beats' if beats_null else 'does not beat'} the floor",
-                f"deflated sharpe {deflated.deflated_sharpe:.3f} (p={deflated.p_value:.3f}, "
-                f"{n_trials} trials); robustness sign-stable={robustness.sign_stable}",
-                *synth_notes,
-            ),
+        notes = (
+            f"{len(windows)} walk-forward windows on {dataset.name!r}",
+            f"candidate sharpe {candidate_metrics['sharpe']:.3f} vs random null "
+            f"{null_sharpe:.3f}: {'beats' if beats_null else 'does not beat'} the floor",
+            f"deflated sharpe {deflated.deflated_sharpe:.3f} (p={deflated.p_value:.3f}, "
+            f"{n_trials} trials); robustness sign-stable={robustness.sign_stable}",
+            *synth_notes,
         )
-        ctx.manifest.record_skill(result)
-        return result
+        return payload, notes
 
     def _apply_synthesized_metrics(
         self, ctx: RunContext, net_returns: list[float], ppy: float

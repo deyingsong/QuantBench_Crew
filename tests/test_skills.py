@@ -171,6 +171,12 @@ def test_reader_research_skills_are_registered() -> None:
     } <= set(default_registry.names("quant_reader"))
 
 
+def test_bench_research_skills_are_registered() -> None:
+    assert {"strategy_evaluator", "robustness_auditor"} <= set(
+        default_registry.names("quant_bench")
+    )
+
+
 def test_agents_accept_and_store_skills() -> None:
     skills = {"demo": StubSkill("demo")}
 

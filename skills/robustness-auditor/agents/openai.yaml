@@ -1,0 +1,4 @@
+interface:
+  display_name: "Robustness Auditor"
+  short_description: "Stress strategies and audit experiment provenance"
+  default_prompt: "Use $robustness-auditor to stress-test this strategy and audit every experiment configuration, result, and robustness conclusion."

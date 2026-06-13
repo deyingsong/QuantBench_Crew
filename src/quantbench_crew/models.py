@@ -282,6 +282,47 @@ class RobustnessReport:
 
 
 @dataclass(frozen=True)
+class ExperimentResult:
+    """One declared Bench experiment with its configuration and verdict."""
+
+    name: str
+    dataset: str
+    expect_edge: bool
+    passed: bool
+    configuration: dict[str, Any] = field(default_factory=dict)
+    metrics: dict[str, float] = field(default_factory=dict)
+    baselines: dict[str, dict[str, float]] = field(default_factory=dict)
+    notes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class StrategyEvaluation:
+    """Multi-dataset comparison of one strategy against declared expectations."""
+
+    paper: Paper
+    experiments: tuple[ExperimentResult, ...]
+    passed_all: bool
+    pass_rate: float
+    notes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class RobustnessAudit:
+    """Auditable stress-test ledger and conservative robustness verdict."""
+
+    experiments: tuple[ExperimentResult, ...]
+    passed_checks: tuple[str, ...]
+    failed_checks: tuple[str, ...]
+    unavailable_checks: tuple[str, ...]
+    configuration_hash: str
+    results_hash: str
+    robust: bool
+    recorded_experiments: int = 0
+    disclosed_local_trials: int = 0
+    notes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class EvalCase:
     """One paper in the system's own regression suite."""
 
@@ -319,6 +360,8 @@ class BenchmarkResult:
     spanning: SpanningResult | None = None
     deflated_sharpe: DeflatedSharpe | None = None
     capacity: CapacityEstimate | None = None
+    strategy_evaluation: StrategyEvaluation | None = None
+    robustness_audit: RobustnessAudit | None = None
 
 
 @dataclass(frozen=True)

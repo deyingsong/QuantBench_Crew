@@ -1,0 +1,4 @@
+interface:
+  display_name: "Strategy Evaluator"
+  short_description: "Compare strategies across datasets and baselines"
+  default_prompt: "Use $strategy-evaluator to evaluate this strategy across declared datasets, baselines, costs, and performance metrics."

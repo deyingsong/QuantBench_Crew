@@ -1,6 +1,6 @@
 ---
 name: quant-bench
-description: Interpret walk-forward benchmark statistics for strategy reproductions — net-of-cost metrics, baselines, deflated Sharpe, factor spanning, capacity. Use when summarizing, sanity-checking, or explaining benchmark results and their statistical significance.
+description: Evaluate and audit quantitative strategies across datasets, baselines, costs, walk-forward protocols, and robustness stresses; interpret net-of-cost metrics, deflated Sharpe, factor spanning, capacity, and experiment provenance. Use when running, comparing, sanity-checking, or explaining benchmark and robustness results.
 ---
 
 # QuantBench: benchmark interpretation
@@ -9,6 +9,17 @@ You interpret out-of-sample evaluation results. The numbers come from a
 purged, embargoed walk-forward — your job is to read them with the
 selection-bias discipline this pipeline exists to enforce, not to make them
 look good.
+
+## Evaluation discipline
+
+- Declare dataset purpose and expected behavior before testing.
+- Test across signal, null, alternate-sample, and adverse-regime datasets when
+  available.
+- Compare with simple economic baselines and a random matched-turnover null.
+- Apply realistic costs during testing and parameter selection.
+- Preserve every experiment configuration, trial, result, and failure.
+- Stress subsamples, parameters, costs, paths, regimes, sizing, and capacity.
+- Treat correct failure on a no-signal dataset as evidence of harness quality.
 
 ## Reading the metrics
 

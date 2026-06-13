@@ -161,6 +161,8 @@ def resolve_skills(agent: str, config: Mapping[str, Any]) -> dict[str, Skill]:
 # Import skill implementations so their @register_skill decorators run when
 # the package is imported. These must stay below the registry definitions.
 from quantbench_crew.skills.bench import dataset_registry as _bench_dataset_registry  # noqa: E402,F401
+from quantbench_crew.skills.bench import robustness_auditor as _bench_robustness_auditor  # noqa: E402,F401
+from quantbench_crew.skills.bench import strategy_evaluator as _bench_strategy_evaluator  # noqa: E402,F401
 from quantbench_crew.skills.bench import walk_forward as _bench_walk_forward  # noqa: E402,F401
 from quantbench_crew.skills.coder import code_generation as _coder_code_generation  # noqa: E402,F401
 from quantbench_crew.skills.coder import metric_synthesis as _coder_metric_synthesis  # noqa: E402,F401

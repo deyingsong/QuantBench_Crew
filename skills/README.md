@@ -33,6 +33,12 @@ separate source-grounded workflows. Harnesses can discover them natively;
 `quant-reader/` carries their core rules for the default prompt-injection
 route.
 
+Bench has two task-focused open-format skills:
+`strategy-evaluator/` for transcript-distilled multi-dataset and baseline
+evaluation, and `robustness-auditor/` for stress testing and experiment
+provenance. Harnesses can discover them natively; `quant-bench/` carries their
+core rules for the default prompt-injection route.
+
 ## Editing
 
 Frontmatter requires `name` and `description` (what the skill is for + when
