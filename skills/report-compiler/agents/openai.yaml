@@ -1,0 +1,4 @@
+interface:
+  display_name: "Research Report Compiler"
+  short_description: "Compile an expert-style evidence-linked review"
+  default_prompt: "Use $report-compiler to compile paper analysis, implementation, benchmark evidence, and expert-lens critique into a final Markdown research review."

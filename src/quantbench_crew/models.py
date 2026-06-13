@@ -376,6 +376,47 @@ class RubricScore:
 
 
 @dataclass(frozen=True)
+class ClaimResultFinding:
+    """One paper claim compared with the evidence produced by Bench."""
+
+    metric: str
+    claimed_value: float | None
+    achieved_value: float | None
+    tolerance: float | None
+    status: str  # "reproduced" | "not_reproduced" | "not_evaluated"
+    gap: float | None = None
+    note: str = ""
+    evidence: tuple[EvidenceLink, ...] = ()
+
+
+@dataclass(frozen=True)
+class ClaimsVsResultsAnalysis:
+    """Forensic comparison of paper claims, results, and reproduction barriers."""
+
+    findings: tuple[ClaimResultFinding, ...]
+    implementation_issues: tuple[str, ...]
+    reproducibility_issues: tuple[str, ...]
+    reproduced_count: int
+    failed_count: int
+    unevaluated_count: int
+    evidence: tuple[EvidenceLink, ...] = ()
+
+
+@dataclass(frozen=True)
+class ReportCompilation:
+    """Evidence-linked final review assembled through expert diagnostic lenses."""
+
+    executive_summary: str
+    empirical_findings: tuple[str, ...]
+    expert_lens_findings: tuple[str, ...]
+    strengths: tuple[str, ...]
+    weaknesses: tuple[str, ...]
+    open_questions: tuple[str, ...]
+    markdown: str
+    evidence: tuple[EvidenceLink, ...] = ()
+
+
+@dataclass(frozen=True)
 class ReviewReport:
     """Final research review for a paper."""
 
@@ -389,10 +430,14 @@ class ReviewReport:
     open_questions: tuple[str, ...]
     rubric: tuple[RubricScore, ...] = ()
     robustness: RobustnessReport | None = None
+    claims_analysis: ClaimsVsResultsAnalysis | None = None
+    compilation: ReportCompilation | None = None
 
     def to_markdown(self) -> str:
         """Render the review as a Markdown report."""
 
+        if self.compilation is not None:
+            return self.compilation.markdown
         return "\n".join(
             [
                 f"# {self.paper.title}",

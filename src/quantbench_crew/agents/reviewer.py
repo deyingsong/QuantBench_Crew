@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 
 from quantbench_crew.models import (
     BenchmarkResult,
@@ -35,13 +36,41 @@ class QuantReviewerAgent:
         )
 
         if ctx is not None and "rubric_verdict" in self.skills:
-            return self._review_with_rubric(
+            report = self._review_with_rubric(
                 analysis, implementation_plan, benchmark_result, open_questions, ctx
             )
+        else:
+            report = self._review_static(
+                analysis, implementation_plan, benchmark_result, open_questions
+            )
 
-        return self._review_static(
-            analysis, implementation_plan, benchmark_result, open_questions
-        )
+        if ctx is not None and "claims_vs_results_analyzer" in self.skills:
+            from quantbench_crew.skills.reviewer.claims_vs_results import (
+                claims_analysis_from_payload,
+            )
+
+            result = self.skills["claims_vs_results_analyzer"].run(
+                ctx,
+                analysis=analysis,
+                implementation_plan=implementation_plan,
+                benchmark_result=benchmark_result,
+            )
+            report = replace(
+                report, claims_analysis=claims_analysis_from_payload(result.payload)
+            )
+
+        if ctx is not None and "report_compiler" in self.skills:
+            from quantbench_crew.skills.reviewer.report_compiler import (
+                report_compilation_from_payload,
+            )
+
+            result = self.skills["report_compiler"].run(
+                ctx, report=report, claims_analysis=report.claims_analysis
+            )
+            report = replace(
+                report, compilation=report_compilation_from_payload(result.payload)
+            )
+        return report
 
     def _review_with_rubric(
         self,
@@ -97,7 +126,11 @@ class QuantReviewerAgent:
         )
         weaknesses = (
             "Current analysis is based on metadata rather than full paper parsing.",
-            "Benchmark result uses placeholder returns and is not evidence of practical value.",
+            (
+                "Benchmark result uses placeholder returns and is not evidence of practical value."
+                if placeholder
+                else "No evidence-linked rubric was scored, so the static verdict remains inconclusive."
+            ),
         )
         return ReviewReport(
             paper=analysis.paper,

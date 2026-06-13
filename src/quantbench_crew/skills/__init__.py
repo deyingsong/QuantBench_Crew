@@ -174,6 +174,8 @@ from quantbench_crew.skills.reader import pdf_acquisition as _reader_pdf_acquisi
 from quantbench_crew.skills.reader import question_identifier as _reader_question  # noqa: E402,F401
 from quantbench_crew.skills.reader import red_flag as _reader_red_flag  # noqa: E402,F401
 from quantbench_crew.skills.reader import target_table as _reader_target_table  # noqa: E402,F401
+from quantbench_crew.skills.reviewer import claims_vs_results as _reviewer_claims  # noqa: E402,F401
+from quantbench_crew.skills.reviewer import report_compiler as _reviewer_compiler  # noqa: E402,F401
 from quantbench_crew.skills.reviewer import rubric as _reviewer_rubric  # noqa: E402,F401
 from quantbench_crew.skills.scout import charter_relevance as _scout_charter_relevance  # noqa: E402,F401
 from quantbench_crew.skills.scout import relevance_scorer as _scout_relevance_scorer  # noqa: E402,F401

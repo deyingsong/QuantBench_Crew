@@ -177,6 +177,12 @@ def test_bench_research_skills_are_registered() -> None:
     )
 
 
+def test_reviewer_research_skills_are_registered() -> None:
+    assert {"claims_vs_results_analyzer", "report_compiler"} <= set(
+        default_registry.names("quant_reviewer")
+    )
+
+
 def test_agents_accept_and_store_skills() -> None:
     skills = {"demo": StubSkill("demo")}
 

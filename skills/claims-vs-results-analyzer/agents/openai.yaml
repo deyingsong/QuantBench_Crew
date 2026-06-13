@@ -1,0 +1,4 @@
+interface:
+  display_name: "Claims vs Results Analyzer"
+  short_description: "Diagnose claims against reproduced evidence"
+  default_prompt: "Use $claims-vs-results-analyzer to compare this paper's claims with benchmark results and diagnose implementation or reproducibility issues."

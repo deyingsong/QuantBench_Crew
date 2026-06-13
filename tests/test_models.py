@@ -5,6 +5,8 @@ from quantbench_crew.models import (
     BenchmarkResult,
     Claim,
     ClaimComparison,
+    ClaimResultFinding,
+    ClaimsVsResultsAnalysis,
     CritiqueAssessment,
     EmpiricalSpecification,
     EvidenceLink,
@@ -16,6 +18,7 @@ from quantbench_crew.models import (
     PaperAnalysis,
     ResearchQuestionAssessment,
     ReproductionTarget,
+    ReportCompilation,
     RobustnessAudit,
     ReviewReport,
     RubricScore,
@@ -111,6 +114,8 @@ def test_existing_models_gain_additive_defaults() -> None:
     assert result.strategy_evaluation is None
     assert result.robustness_audit is None
     assert report.rubric == ()
+    assert report.claims_analysis is None
+    assert report.compilation is None
 
 
 def test_reader_assessment_models_construct() -> None:
@@ -164,3 +169,34 @@ def test_rubric_score_carries_evidence() -> None:
     )
 
     assert score.evidence[0].kind == "metric"
+
+
+def test_reviewer_research_models_construct() -> None:
+    finding = ClaimResultFinding(
+        metric="sharpe",
+        claimed_value=1.0,
+        achieved_value=0.7,
+        tolerance=0.2,
+        status="not_reproduced",
+        gap=-0.3,
+    )
+    analysis = ClaimsVsResultsAnalysis(
+        findings=(finding,),
+        implementation_issues=("missing lag rule",),
+        reproducibility_issues=("cost model unavailable",),
+        reproduced_count=0,
+        failed_count=1,
+        unevaluated_count=0,
+    )
+    compilation = ReportCompilation(
+        executive_summary="inconclusive",
+        empirical_findings=("Sharpe 0.7",),
+        expert_lens_findings=("Costs unresolved",),
+        strengths=(),
+        weaknesses=("Claim missed",),
+        open_questions=("Which lag rule?",),
+        markdown="# Review\n",
+    )
+
+    assert analysis.findings[0].gap == -0.3
+    assert compilation.markdown == "# Review\n"

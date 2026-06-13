@@ -39,6 +39,13 @@ evaluation, and `robustness-auditor/` for stress testing and experiment
 provenance. Harnesses can discover them natively; `quant-bench/` carries their
 core rules for the default prompt-injection route.
 
+Reviewer has two task-focused open-format skills:
+`claims-vs-results-analyzer/` for forensic claim comparison and reproducibility
+diagnosis, and `report-compiler/` for comprehensive evidence-linked Markdown
+reviews through explicit quantitative expert lenses. Harnesses can discover
+them natively; `quant-reviewer/` carries their core rules for the default
+prompt-injection route.
+
 ## Editing
 
 Frontmatter requires `name` and `description` (what the skill is for + when

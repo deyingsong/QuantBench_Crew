@@ -215,3 +215,7 @@ agents:
     skills:
       rubric_verdict:
         enabled: false
+      claims_vs_results_analyzer:
+        enabled: false
+      report_compiler:
+        enabled: false

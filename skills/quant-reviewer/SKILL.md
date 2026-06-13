@@ -39,6 +39,16 @@ that most directly undermines the headline claim (look-ahead, survivorship,
 costs, multiple testing). Steelman the paper once: if a detected flaw has an
 innocuous reading, say what additional evidence would distinguish the two.
 
+## Final compilation
+
+Compare each extracted claim with reproduced evidence before writing the
+narrative. Separate paper claims, run results, implementation uncertainty, and
+practical relevance. Apply expert perspectives as diagnostic lenses:
+statistical honesty, implementation reality, portfolio role, regime and
+survival risk, scalable research process, variant perception, incentives, and
+governance. Preserve disagreements among lenses and end with decisive next
+tests that could change the verdict.
+
 ## Tone and limits
 
 Direct, specific, and unexcited; quantified over qualitative ("net Sharpe
