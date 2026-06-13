@@ -1,0 +1,18 @@
+Reconstruct the scientific methodology used by this paper. Preserve equations,
+algorithm order, and experiment settings. Distinguish the proposed method from
+baselines and list required details that the supplied text omits.
+
+Paper title: {title}
+Abstract: {abstract}
+Research question: {research_question}
+Previously identified method: {proposed_method}
+
+Return ONLY a JSON object with exactly these keys:
+- "summary": string describing the proposed method and its role
+- "equations": array of strings preserving equations and symbol definitions
+- "algorithms": array of strings in execution order
+- "experiment_settings": array of strings with parameters, frequencies, and setup
+- "baselines": array of strings
+- "omitted_details": array of strings
+- "confidence": number from 0 to 1
+- "evidence": array of objects with "field" and a short verbatim "quote"

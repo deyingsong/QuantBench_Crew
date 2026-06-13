@@ -9,7 +9,15 @@ from typing import Any, Protocol
 
 from quantbench_crew.models import Paper, PaperAnalysis
 from quantbench_crew.skills.base import RunContext, Skill
+from quantbench_crew.skills.reader.criticizer import critique_from_payload
+from quantbench_crew.skills.reader.empirical_spec import empirical_spec_from_payload
 from quantbench_crew.skills.reader.method_spec import method_spec_from_payload
+from quantbench_crew.skills.reader.methodology_extractor import (
+    methodology_assessment_from_payload,
+)
+from quantbench_crew.skills.reader.question_identifier import (
+    question_assessment_from_payload,
+)
 from quantbench_crew.skills.reader.red_flag import red_flags_from_payload
 from quantbench_crew.skills.reader.target_table import reproduction_target_from_payload
 from quantbench_crew.skills.validation import extract_json_object
@@ -109,7 +117,35 @@ class QuantReaderAgent:
     def _extract_structured(
         self, analysis: PaperAnalysis, ctx: RunContext, full_text: str = ""
     ) -> PaperAnalysis:
-        """Attach MethodSpec, ReproductionTarget, and red flags from skills."""
+        """Attach research assessments and reproduction-oriented structures."""
+
+        question_skill = self.skills.get("question_identifier")
+        if question_skill is not None:
+            result = question_skill.run(ctx, analysis=analysis, full_text=full_text)
+            assessment = question_assessment_from_payload(analysis.paper, result.payload)
+            if assessment is not None:
+                analysis = replace(analysis, question_assessment=assessment)
+
+        methodology_skill = self.skills.get("methodology_extractor")
+        if methodology_skill is not None:
+            result = methodology_skill.run(ctx, analysis=analysis, full_text=full_text)
+            assessment = methodology_assessment_from_payload(analysis.paper, result.payload)
+            if assessment is not None:
+                analysis = replace(analysis, methodology_assessment=assessment)
+
+        empirical_skill = self.skills.get("empirical_spec_parser")
+        if empirical_skill is not None:
+            result = empirical_skill.run(ctx, analysis=analysis, full_text=full_text)
+            empirical_spec = empirical_spec_from_payload(analysis.paper, result.payload)
+            if empirical_spec is not None:
+                analysis = replace(analysis, empirical_spec=empirical_spec)
+
+        criticizer_skill = self.skills.get("criticizer")
+        if criticizer_skill is not None:
+            result = criticizer_skill.run(ctx, analysis=analysis, full_text=full_text)
+            critique = critique_from_payload(analysis.paper, result.payload)
+            if critique is not None:
+                analysis = replace(analysis, critique=critique)
 
         spec_skill = self.skills.get("method_spec_extraction")
         if spec_skill is not None:
@@ -163,11 +199,15 @@ def document_paths_for_paper(paper: Paper) -> tuple[Path, ...]:
 
 def _paperqa_question(paper: Paper) -> str:
     return (
-        "Analyze this quantitative finance research paper for a reproducible "
-        "benchmarking workflow. Return concise JSON with these keys: "
-        "research_question, proposed_method, assumptions, datasets, metrics, "
-        "limitations. The assumptions, datasets, metrics, and limitations values "
-        "must be arrays of short strings. Use citations in values when helpful. "
+        "Analyze this quantitative finance research paper for a source-grounded, "
+        "reproducible benchmarking workflow. Return concise JSON with these keys: "
+        "research_question, field_state, importance, existing_method_gap, "
+        "claimed_contribution, proposed_method, equations, algorithms, "
+        "experiment_settings, assumptions, datasets, features, labels, "
+        "preprocessing, splits, baselines, metrics, limitations, validity_threats, "
+        "and future_directions. Every value except research_question and "
+        "proposed_method must be an array of short strings. Use citations in values "
+        "when helpful and distinguish author statements from inference. "
         f"Paper title: {paper.title}"
     )
 

@@ -105,15 +105,37 @@ agents:
     fallback: metadata extraction
     extraction_fields:
       - research_question
+      - field_state
+      - importance
+      - existing_method_gap
+      - claimed_contribution
       - proposed_method
+      - equations
+      - algorithms
+      - experiment_settings
       - assumptions
       - datasets
+      - features
+      - labels
+      - preprocessing
+      - splits
+      - baselines
       - metrics
       - limitations
+      - validity_threats
+      - future_directions
     skills:
       pdf_acquisition:
         enabled: false
         cache_dir: data/raw
+      question_identifier:
+        enabled: false
+      methodology_extractor:
+        enabled: false
+      empirical_spec_parser:
+        enabled: false
+      criticizer:
+        enabled: false
       target_table_extraction:
         enabled: false
         default_tolerance: 0.2

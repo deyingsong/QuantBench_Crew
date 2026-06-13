@@ -1,0 +1,17 @@
+Identify the paper's central research question and motivating scholarly
+context. Use only supplied paper text. Separate explicit claims from inference,
+and use empty arrays when an element is not stated.
+
+Paper title: {title}
+Abstract: {abstract}
+Previously identified question: {research_question}
+Previously identified method: {proposed_method}
+
+Return ONLY a JSON object with exactly these keys:
+- "question": string, one central answerable research question
+- "field_state": array of strings describing what the field currently knows or does
+- "importance": array of strings describing why answering the question matters
+- "existing_method_gap": array of strings naming failures or missing evidence
+- "claimed_contribution": array of strings naming the paper's proposed answer
+- "confidence": number from 0 to 1
+- "evidence": array of objects with "field" and a short verbatim "quote"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Question Identifier"
+  short_description: "Extract a paper question and research gap"
+  default_prompt: "Use $question-identifier to identify this paper's central research question, field context, importance, and existing-method gap."

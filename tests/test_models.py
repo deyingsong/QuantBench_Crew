@@ -5,11 +5,15 @@ from quantbench_crew.models import (
     BenchmarkResult,
     Claim,
     ClaimComparison,
+    CritiqueAssessment,
+    EmpiricalSpecification,
     EvidenceLink,
     ImplementationPlan,
     MethodSpec,
+    MethodologyAssessment,
     Paper,
     PaperAnalysis,
+    ResearchQuestionAssessment,
     ReproductionTarget,
     ReviewReport,
     RubricScore,
@@ -96,8 +100,28 @@ def test_existing_models_gain_additive_defaults() -> None:
 
     assert analysis.method_spec is None
     assert analysis.reproduction_target is None
+    assert analysis.question_assessment is None
+    assert analysis.methodology_assessment is None
+    assert analysis.empirical_spec is None
+    assert analysis.critique is None
     assert result.comparisons == ()
     assert report.rubric == ()
+
+
+def test_reader_assessment_models_construct() -> None:
+    evidence = (EvidenceLink(kind="paper_quote", reference="abstract"),)
+
+    question = ResearchQuestionAssessment(
+        question="Does the method improve forecasts?", evidence=evidence
+    )
+    methodology = MethodologyAssessment(summary="Estimate a nonlinear model.")
+    empirical = EmpiricalSpecification(datasets=("CRSP",), labels=("next-month return",))
+    critique = CritiqueAssessment(reader_inferred_threats=("possible leakage",))
+
+    assert question.evidence == evidence
+    assert methodology.equations == ()
+    assert empirical.datasets == ("CRSP",)
+    assert critique.reader_inferred_threats == ("possible leakage",)
 
 
 def test_rubric_score_carries_evidence() -> None:

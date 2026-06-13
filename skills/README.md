@@ -26,6 +26,13 @@ and `relevance-scorer/` for transcript-distilled research-value ranking.
 Harnesses can discover them natively; `quant-scout/` carries their core rules
 for the default prompt-injection route.
 
+Reader has four task-focused open-format skills:
+`question-identifier/`, `methodology-extractor/`, `empirical-spec-parser/`,
+and `criticizer/`. They distill the academic/research transcript corpus into
+separate source-grounded workflows. Harnesses can discover them natively;
+`quant-reader/` carries their core rules for the default prompt-injection
+route.
+
 ## Editing
 
 Frontmatter requires `name` and `description` (what the skill is for + when

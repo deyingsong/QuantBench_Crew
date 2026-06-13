@@ -1,0 +1,18 @@
+Critically evaluate the paper's argument and evidence. Separate author-stated
+limitations from Reader-inferred validity threats. Do not invent flaws, and
+derive future directions from a named limitation or unanswered question.
+
+Paper title: {title}
+Abstract: {abstract}
+Research question: {research_question}
+Known assumptions: {assumptions}
+Known limitations: {limitations}
+
+Return ONLY a JSON object with exactly these keys:
+- "assumptions": array of explicit or implicit assumptions
+- "author_stated_limitations": array of limitations stated by the authors
+- "reader_inferred_threats": array of grounded validity threats
+- "unanswered_questions": array of consequential open questions
+- "future_directions": array of limitation-grounded next studies
+- "confidence": number from 0 to 1
+- "evidence": array of objects with "field" and a short verbatim "quote"

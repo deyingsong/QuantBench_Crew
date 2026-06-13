@@ -140,6 +140,61 @@ class MethodSpec:
 
 
 @dataclass(frozen=True)
+class ResearchQuestionAssessment:
+    """Research context and gap that motivate a paper."""
+
+    question: str
+    field_state: tuple[str, ...] = ()
+    importance: tuple[str, ...] = ()
+    existing_method_gap: tuple[str, ...] = ()
+    claimed_contribution: tuple[str, ...] = ()
+    confidence: float = 0.0
+    evidence: tuple[EvidenceLink, ...] = ()
+
+
+@dataclass(frozen=True)
+class MethodologyAssessment:
+    """Scientific method, mathematics, algorithms, and experiment settings."""
+
+    summary: str
+    equations: tuple[str, ...] = ()
+    algorithms: tuple[str, ...] = ()
+    experiment_settings: tuple[str, ...] = ()
+    baselines: tuple[str, ...] = ()
+    omitted_details: tuple[str, ...] = ()
+    confidence: float = 0.0
+    evidence: tuple[EvidenceLink, ...] = ()
+
+
+@dataclass(frozen=True)
+class EmpiricalSpecification:
+    """Data, variables, splits, baselines, and metrics used by a paper."""
+
+    datasets: tuple[str, ...] = ()
+    features: tuple[str, ...] = ()
+    labels: tuple[str, ...] = ()
+    preprocessing: tuple[str, ...] = ()
+    splits: tuple[str, ...] = ()
+    baselines: tuple[str, ...] = ()
+    metrics: tuple[str, ...] = ()
+    confidence: float = 0.0
+    evidence: tuple[EvidenceLink, ...] = ()
+
+
+@dataclass(frozen=True)
+class CritiqueAssessment:
+    """Grounded criticism of a paper's assumptions, limits, and open work."""
+
+    assumptions: tuple[str, ...] = ()
+    author_stated_limitations: tuple[str, ...] = ()
+    reader_inferred_threats: tuple[str, ...] = ()
+    unanswered_questions: tuple[str, ...] = ()
+    future_directions: tuple[str, ...] = ()
+    confidence: float = 0.0
+    evidence: tuple[EvidenceLink, ...] = ()
+
+
+@dataclass(frozen=True)
 class PaperAnalysis:
     """Structured analysis extracted from a paper."""
 
@@ -154,6 +209,10 @@ class PaperAnalysis:
     reproduction_target: ReproductionTarget | None = None
     relevance: RelevanceAssessment | None = None
     red_flags: tuple[RedFlag, ...] = ()
+    question_assessment: ResearchQuestionAssessment | None = None
+    methodology_assessment: MethodologyAssessment | None = None
+    empirical_spec: EmpiricalSpecification | None = None
+    critique: CritiqueAssessment | None = None
 
 
 @dataclass(frozen=True)

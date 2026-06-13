@@ -1,0 +1,4 @@
+interface:
+  display_name: "Methodology Extractor"
+  short_description: "Extract methods, equations, and settings"
+  default_prompt: "Use $methodology-extractor to reconstruct this paper's proposed method, equations, algorithms, and experiment settings."

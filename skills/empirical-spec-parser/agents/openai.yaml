@@ -1,0 +1,4 @@
+interface:
+  display_name: "Empirical Spec Parser"
+  short_description: "Parse data, labels, and evaluation design"
+  default_prompt: "Use $empirical-spec-parser to extract this paper's datasets, features, labels, splits, baselines, and evaluation metrics."

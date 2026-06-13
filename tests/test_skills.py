@@ -162,6 +162,15 @@ def test_workstream_f_skills_are_registered() -> None:
     assert "red_flag_scan" in default_registry.names("quant_reader")
 
 
+def test_reader_research_skills_are_registered() -> None:
+    assert {
+        "question_identifier",
+        "methodology_extractor",
+        "empirical_spec_parser",
+        "criticizer",
+    } <= set(default_registry.names("quant_reader"))
+
+
 def test_agents_accept_and_store_skills() -> None:
     skills = {"demo": StubSkill("demo")}
 

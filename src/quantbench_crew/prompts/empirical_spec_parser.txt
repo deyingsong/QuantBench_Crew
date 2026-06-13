@@ -1,0 +1,19 @@
+Parse the paper's empirical design. Keep datasets, features, labels,
+preprocessing, splits, baselines, and metric definitions separate. Do not
+invent conventional design details that the supplied text does not state.
+
+Paper title: {title}
+Abstract: {abstract}
+Previously identified datasets: {datasets}
+Previously identified metrics: {metrics}
+
+Return ONLY a JSON object with exactly these keys:
+- "datasets": array of strings including source, sample, period, and filters
+- "features": array of strings
+- "labels": array of strings
+- "preprocessing": array of strings
+- "splits": array of strings
+- "baselines": array of strings
+- "metrics": array of metric-definition strings, not numeric findings
+- "confidence": number from 0 to 1
+- "evidence": array of objects with "field" and a short verbatim "quote"
