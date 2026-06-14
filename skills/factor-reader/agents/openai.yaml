@@ -1,0 +1,4 @@
+interface:
+  display_name: "Equity Factor Research Reader"
+  short_description: "Review equity factors, anomalies, and decay"
+  default_prompt: "Use $factor-reader to analyze this cross-sectional equity factor paper's sorts, Fama-MacBeth setup, benchmark alpha, post-publication decay, and implementation realism."

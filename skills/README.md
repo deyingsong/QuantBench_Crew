@@ -84,6 +84,14 @@ extraction or adversarial domain critique. It is progressively disclosed
 through native skill discovery and is not injected into unrelated default API
 calls.
 
+`factor-reader/` is a cross-agent domain-expert skill for cross-sectional
+equity factors, anomalies, characteristic portfolios, factor-model alpha, and
+post-publication decay. Scout should identify and route papers whose central
+contribution falls in this domain; Reader or Reviewer can then invoke the skill
+for source-grounded extraction or adversarial domain critique. It is
+progressively disclosed through native skill discovery and is not injected
+into unrelated default API calls.
+
 ## Vendored engineering library
 
 `engineering/` is a verbatim, MIT-licensed copy of
