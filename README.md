@@ -1,153 +1,413 @@
 # QuantBench Crew
 
-A multi-agent research assistant that discovers quantitative finance papers,
-extracts their methods and claims, generates and sandbox-tests candidate
-implementations, benchmarks them on synthetic and real market data, and issues
-an evidence-linked verdict on whether the paper's headline result actually
-reproduces.
+QuantBench Crew is a multi-agent research system for discovering quantitative
+finance papers, reconstructing their methods and claims, generating auditable
+implementation artifacts, benchmarking strategies, and issuing evidence-linked
+research verdicts.
 
-Its defining trait is statistical honesty: every trial is counted in a run
-manifest, observed Sharpe ratios are deflated for selection bias, candidates
-must beat a random-matched-turnover null, and the reviewer refuses to call
-anything "promising" that rests on placeholder data or an uncorrected search.
-It does not make trading decisions, execute trades, or provide financial
-advice.
+The project is built around statistical honesty:
 
-## Quick start
+- preserve the paper's exact claim and implementation uncertainty;
+- keep temporal and point-in-time data discipline explicit;
+- count generated candidates, baselines, seeds, and discarded trials;
+- evaluate out of sample, net of costs, against simple and random nulls;
+- deflate headline Sharpe ratios for selection bias;
+- refuse confident conclusions when the evidence is placeholder, incomplete,
+  or not reproducible.
+
+QuantBench Crew supports research review only. It does not execute trades or
+provide investment advice.
+
+## Quick Start
 
 ```bash
-# 1. Create and activate the environment (Python 3.11+)
+# Create the recommended Python 3.11 environment.
 conda env create -f environment.yml
 conda activate quantbench-crew
 
-# 2. Run the deterministic dry workflow — no network, no API keys
+# Run the deterministic offline workflow on two built-in sample papers.
 quantbench run --source local --max-papers 2
 
-# 3. Run the test suite
-pytest              # fast suite (~25s)
-pytest -m e2e       # golden-paper end-to-end + synthetic-noise gate
-pytest -m eval      # system regression suite over the curated eval set (slow)
+# Inspect the outputs.
+ls reports/
+find runs -name manifest.json
+
+# Run the default test suite.
+pytest
 ```
 
-Each run writes, per paper, a review report (`reports/<slug>.md`), the
-generated strategy implementation (`reports/<slug>_strategy.py`), and a
-reproducibility manifest (`runs/<run_id>/manifest.json`); the report is also
-printed to stdout (`--no-write-reports` disables the files). Code generation
-runs by default with a deterministic offline fallback; everything else beyond
-the dry workflow — live arXiv search, LLM-backed extraction, real-data
-benchmarking — is an opt-in *skill* toggled in
-[configs/agents.yaml](configs/agents.yaml); the sections below explain each
-tier. Always run commands inside the conda environment.
+The dry workflow needs no network access or API keys. It writes:
 
----
+- `reports/<paper-slug>.md`: the human-readable review;
+- `reports/<paper-slug>_strategy.py`: the selected generated strategy module;
+- `runs/<run-id>/manifest.json`: the reproducibility and trial ledger;
+- additional run artifacts under `runs/<run-id>/`.
 
-## Detailed documentation
-
-### 1. How it works
-
-Five agents form a pipeline; each paper flows through all of them and every
-step records its results in the run manifest:
-
-```
- arXiv / local JSON
-        |
-   QuantScout      rank by keywords + research-charter relevance;
-        |          reproducibility triage gates infeasible papers early
-   QuantReader     PDF acquisition -> full-text MethodSpec extraction ->
-        |          falsifiable-claim enumeration -> quant-pitfalls red flags
-   QuantCoder      ERA (Flat UCB) search over candidate strategy modules,
-        |          each scored in a sandbox against deterministic test
-        |          templates (shape / determinism / no-lookahead / invariants)
-   QuantBench      purged+embargoed walk-forward on a registered dataset,
-        |          baselines incl. a random-matched-turnover null, net-of-cost
-        |          frequency-aware metrics, deflated Sharpe, factor spanning,
-        |          robustness sweeps, claim comparison vs the paper's numbers
-   QuantReviewer   evidence-linked rubric scores + red-team checklist ->
-        |          verdict: scaffold-only | weak | inconclusive | promising
-        v
- report.md + runs/<run_id>/manifest.json
-```
-
-Two design rules hold everywhere:
-
-- **Skills are plug-ins; agents are orchestrators.** Each capability is a
-  named skill with an availability check and a deterministic offline fallback.
-  All skills ship disabled, so the default pipeline is a dependency-free,
-  bit-exact dry run, and enabling any subset never breaks the rest.
-- **Count every trial.** The manifest records every candidate, baseline, seed,
-  LLM call (with cost), and artifact hash. The deflated Sharpe ratio reads its
-  trial count from the manifest, so a result found by a wide search is
-  haircut accordingly — selection bias is treated as the primary enemy.
-
-### 2. Install
-
-Recommended (conda, includes PaperQA2):
+For a deterministic fixture-driven paper:
 
 ```bash
-conda env create -f environment.yml
-conda activate quantbench-crew
+quantbench run \
+  --paper-json tests/fixtures/golden_paper.json \
+  --max-papers 1
 ```
 
-Minimal (any Python 3.11+ environment):
+## System Overview
 
-```bash
-pip install -e ".[dev]"          # core + pytest; stdlib + PyYAML only
-```
+QuantBench Crew separates orchestration, executable capabilities, model
+instructions, and evidence:
 
-Optional tiers — the dry workflow never requires any of these:
-
-| Extra / package        | Enables                                                        |
-| ---------------------- | -------------------------------------------------------------- |
-| `pip install -e ".[paperqa]"` | PaperQA2 full-text document reading in the reader        |
-| `pip install anthropic`       | the live LLM provider (`llm.provider: anthropic`)        |
-| `pip install -e ".[numeric]"` | numpy/pandas/scikit-learn for generated ML strategies in the sandbox (`quantbench_crew.numeric` reports availability) |
-
-### 3. Running the pipeline
-
-```bash
-quantbench run [options]         # or: python -m quantbench_crew.main
-```
-
-| Flag | Default | Meaning |
+| Layer | Responsibility | Main location |
 | --- | --- | --- |
-| `--source NAME` | `local` | `local` (JSON records), `arxiv` (live q-fin search), a conference — `kdd`, `icml`, `iclr`, `wsdm`, `aaai`, `ijcai`, `www` (ACM Web Conference), `neurips` — a journal — `jf`, `jfe`, `rfs` — or a group: `conferences`, `journals` |
-| `--query` | `"quantitative finance"` | search query (non-local sources) |
-| `--query-pool SEL` | – | search a curated query pool instead of one query: `auto` (each venue's matched pool), a pool name (`roots`, `finance`, `general-ai`, `core-ml`, `data-mining`), `pool/category`, or `all`; mutually exclusive with `--query` |
-| `--year N` | – | restrict conference/journal sources to one publication year |
-| `--max-papers` | `2` | papers to process (split across a group's venues) |
-| `--paper-json PATH` | – | local JSON list of paper records |
-| `--agents-config PATH` | `configs/agents.yaml` | agent + skill configuration |
-| `--benchmark-config PATH` | `configs/benchmarks.yaml` | benchmark defaults |
-| `--report-dir PATH` | `reports` | report output dir |
-| `--write-reports / --no-write-reports` | **on** | write `reports/<slug>.md` + the generated `reports/<slug>_strategy.py` per paper |
-| `--runs-dir PATH` | `runs` | manifest dir; each paper writes `<runs-dir>/<run_id>/manifest.json` |
-| `--processed-path PATH` | `data/processed/seen_papers.json` | cross-run dedup watermark (arxiv source) |
-| `--no-dedup` | off | disable the processed-paper watermark |
+| Agents | Own the five stages of the paper lifecycle | `src/quantbench_crew/agents/` |
+| Runtime skills | Execute optional Python capabilities and record results | `src/quantbench_crew/skills/` |
+| Agent Skills | Teach model backbones how to perform tasks and domain review | `skills/*/SKILL.md` |
+| Tools and benchmarks | Search, sandbox code, load data, and compute evidence | `src/quantbench_crew/tools/`, `benchmarks/`, `datasets/` |
+| Run manifest | Preserve skills, trials, LLM calls, seeds, and artifact hashes | `runs/<run-id>/manifest.json` |
 
-**Full pipeline, with or without API keys.** Copy `configs/agents.yaml`, flip
-`enabled: true` on the skills you want, and run against the golden paper. The
-shipped `llm.provider: per-agent` uses each agent's live backbone when its
-API key is present and downgrades that agent to its deterministic fallback
-when it is not — so the same command exercises extraction, code generation,
-sandboxing, walk-forward benchmarking, and the rubric verdict end to end
-either way (set `llm.provider: none` to force everything offline):
+Two principles shape the architecture:
 
-```bash
-quantbench run --paper-json tests/fixtures/golden_paper.json \
-  --agents-config my-agents.yaml --max-papers 1
+1. **Agents orchestrate; skills perform bounded work.** Agent public methods
+   remain stable while runtime skills can be enabled, disabled, or replaced.
+2. **Evidence survives every handoff.** The final reviewer should be able to
+   trace a statement to paper evidence, a skill result, a benchmark artifact,
+   or a manifest entry.
+
+## Orchestration Schema
+
+### Paper Review Workflow
+
+Each selected paper passes through five agents:
+
+```mermaid
+flowchart LR
+    S["Paper sources<br/>local, arXiv, venues, journals"] --> A["QuantScout"]
+    A -->|ScoredPaper| B["QuantReader"]
+    B -->|PaperAnalysis + MethodSpec + claims| C["QuantCoder"]
+    C -->|ImplementationPlan + generated artifacts| D["QuantBench"]
+    D -->|BenchmarkResult + robustness evidence| E["QuantReviewer"]
+    E --> F["ReviewReport"]
+
+    M["RunContext + Manifest"] --- A
+    M --- B
+    M --- C
+    M --- D
+    M --- E
 ```
 
-**Live sources** (network; results deduplicated against previous runs by
-arXiv id / DOI / title watermark):
+The main loop lives in
+[`src/quantbench_crew/main.py`](src/quantbench_crew/main.py):
+
+1. Discover or load papers.
+2. Resolve each agent's enabled runtime skills from
+   [`configs/agents.yaml`](configs/agents.yaml).
+3. Rank papers with Scout.
+4. Start one manifest-backed run per ranked paper.
+5. Triage the paper and optionally stop before downstream spend.
+6. Read and structure the paper.
+7. Plan and generate a candidate implementation.
+8. Benchmark and stress the method.
+9. Compile the final evidence-linked review.
+10. Hash and save the run artifacts.
+
+### Agent Responsibilities
+
+| Agent | Input | Core responsibility | Output |
+| --- | --- | --- | --- |
+| **QuantScout** | Candidate `Paper` records | Rank by keywords, charter fit, research value, and reproducibility feasibility | `ScoredPaper`, relevance and triage evidence |
+| **QuantReader** | Paper metadata, abstract, and optional full text | Reconstruct the question, method, empirical design, claims, assumptions, and threats | `PaperAnalysis`, `MethodSpec`, `ReproductionTarget` |
+| **QuantCoder** | Structured paper analysis | Turn the extracted method into an implementation plan and sandbox-tested strategy candidates | `ImplementationPlan`, generated code and candidate ledger |
+| **QuantBench** | Plan, extracted claims, configured dataset | Run walk-forward evaluation, baselines, costs, selection-bias corrections, and robustness checks | `BenchmarkResult`, experiment and robustness artifacts |
+| **QuantReviewer** | Analysis, plan, and benchmark evidence | Compare claims with results and issue a conservative, evidence-linked verdict | `ReviewReport` |
+
+### Core Data Contracts
+
+The orchestration passes frozen dataclasses rather than loose prose:
+
+```text
+Paper
+  -> ScoredPaper
+  -> PaperAnalysis
+       -> MethodSpec
+       -> ReproductionTarget / Claim
+       -> empirical and critique assessments
+  -> ImplementationPlan
+  -> BenchmarkResult
+       -> ClaimComparison
+       -> DeflatedSharpe
+       -> StrategyEvaluation / RobustnessAudit
+  -> ReviewReport
+```
+
+The most important boundary is the `MethodSpec`: it converts paper prose into
+an implementable contract containing the universe, signal definition,
+portfolio construction, frequency, holding period, sample, evaluation
+protocol, data requirements, and hyperparameters.
+
+Generated strategies implement the `Strategy` contract:
+
+```python
+class Strategy(Protocol):
+    def fit(self, data: PanelData, train_end: date) -> None: ...
+    def weights(self, data: PanelData, as_of: date) -> dict[str, float]: ...
+```
+
+`PanelData` is point-in-time by construction. A strategy must use only data
+available on or before `as_of`.
+
+### Current Coder-to-Bench Boundary
+
+The Coder emits strategy modules and tests them in the sandbox for shape,
+determinism, no-lookahead behavior, and construction invariants. Every
+evaluated candidate is counted as a trial.
+
+The current default `walk_forward` runtime skill evaluates a trusted named
+strategy, usually reference momentum, parameterized by the extracted
+`MethodSpec`. The repository also contains a sandboxed generated-strategy
+backtest utility, but generated-code walk-forward is not yet the default
+orchestration path. Reports should therefore distinguish:
+
+- generated implementation quality;
+- trusted-strategy benchmark evidence;
+- paper-claim reproduction evidence.
+
+### Paper Tracking Workflow
+
+`quantbench track` is a lighter Scout-only workflow for maintaining a durable
+research queue:
+
+```mermaid
+flowchart LR
+    A["Assigned sources"] --> B["Strict online-date filter"]
+    B --> C["Cross-source deduplication"]
+    C --> D["Research-value ranking"]
+    D --> E["data/processed/paper_queue.json"]
+```
+
+It preserves prior human status and notes when updating the queue.
+
+## Skills: Two Complementary Systems
+
+The repository uses the word **skill** for two related but distinct systems.
+
+### 1. Runtime Python Skills
+
+Runtime skills are executable plug-ins implementing:
+
+```python
+class Skill(Protocol):
+    name: str
+
+    def available(self) -> bool: ...
+    def run(self, ctx: RunContext, **inputs: Any) -> SkillResult: ...
+```
+
+They are registered in
+[`src/quantbench_crew/skills/__init__.py`](src/quantbench_crew/skills/__init__.py),
+toggled under `agents.<agent>.skills` in
+[`configs/agents.yaml`](configs/agents.yaml), and invoked by an owning agent.
+Every invocation records a `SkillResult` in the run manifest.
+
+Most runtime skills are disabled in the shipped config. `code_generation` and
+`metric_synthesis` are enabled by default and remain offline-safe.
+
+#### Scout Runtime Skills
+
+| Skill | Default | Purpose |
+| --- | --- | --- |
+| `charter_relevance` | off | Score papers against the configured research charter |
+| `relevance_scorer` | off | Rank by charter fit, evidence, implementability, economics, and information gain |
+| `reproducibility_triage` | off | Classify data access and gate low-feasibility papers before downstream spend |
+
+The Scout config also declares disabled `arxiv_search` as a future-capability
+placeholder. It is not currently a registered runtime skill; live arXiv
+discovery runs through the source adapter in `tools/arxiv_tool.py`.
+
+#### Reader Runtime Skills
+
+| Skill | Default | Purpose |
+| --- | --- | --- |
+| `pdf_acquisition` | off | Cache an available paper PDF under `data/raw/` |
+| `question_identifier` | off | Extract the central question, field state, gap, and contribution |
+| `methodology_extractor` | off | Reconstruct equations, algorithms, settings, and baselines |
+| `empirical_spec_parser` | off | Parse datasets, features, labels, preprocessing, splits, and metrics |
+| `criticizer` | off | Separate assumptions, stated limitations, inferred threats, and open questions |
+| `method_spec_extraction` | off | Produce the implementable `MethodSpec` |
+| `target_table_extraction` | off | Convert quantitative headline claims into a `ReproductionTarget` |
+| `red_flag_scan` | off | Detect costs, tuning, survivorship, microcap, sample, and snooping risks |
+
+#### Coder Runtime Skills
+
+| Skill | Default | Purpose |
+| --- | --- | --- |
+| `code_generation` | **on** | Run bounded ERA search over sandbox-tested candidate strategy modules |
+| `metric_synthesis` | **on** | Generate and validate paper-claimed metrics absent from the built-in suite |
+| `consult_reader` | off | Ask Reader to resolve performance-affecting `MethodSpec` gaps before coding |
+
+#### Bench Runtime Skills
+
+| Skill | Default | Purpose |
+| --- | --- | --- |
+| `dataset_registry` | off | Load, version, hash, and record the configured dataset |
+| `walk_forward` | off | Run purged and embargoed out-of-sample evaluation with baselines and costs |
+| `strategy_evaluator` | off | Test declared signal and no-signal datasets against expected behavior |
+| `robustness_auditor` | off | Preserve a stress-test ledger across costs, parameters, paths, and datasets |
+
+#### Reviewer Runtime Skills
+
+| Skill | Default | Purpose |
+| --- | --- | --- |
+| `rubric_verdict` | off | Score reproducibility, robustness, costs, novelty, and data accessibility |
+| `claims_vs_results_analyzer` | off | Compare every extracted claim with achieved evidence |
+| `report_compiler` | off | Compile the comprehensive evidence-linked Markdown review |
+
+### 2. Open-Format Agent Skills
+
+Open-format Agent Skills are instruction bundles under [`skills/`](skills/).
+Each skill is a folder containing a required `SKILL.md` with YAML metadata and
+instructions, plus optional `references/`, `scripts/`, `assets/`, and
+`agents/openai.yaml`.
+
+They guide model behavior; they are not Python runtime plug-ins.
+
+#### Core Agent Skills
+
+These five skills define the stable role discipline injected into each
+agent's model calls:
+
+| Skill | Role |
+| --- | --- |
+| [`quant-scout`](skills/quant-scout/SKILL.md) | Date-bounded discovery, charter-relative ranking, and reproducibility triage |
+| [`quant-reader`](skills/quant-reader/SKILL.md) | Source-grounded question, method, empirical-design, and claim extraction |
+| [`quant-coder`](skills/quant-coder/SKILL.md) | Deterministic, sandbox-safe Strategy and PanelData implementation |
+| [`quant-bench`](skills/quant-bench/SKILL.md) | OOS benchmark interpretation, null comparison, deflated Sharpe, and provenance |
+| [`quant-reviewer`](skills/quant-reviewer/SKILL.md) | Evidence-linked red-team review and verdict discipline |
+
+#### Task-Focused Skills
+
+| Area | Skills |
+| --- | --- |
+| Scout | [`new-paper-tracker`](skills/new-paper-tracker/SKILL.md), [`relevance-scorer`](skills/relevance-scorer/SKILL.md) |
+| Reader | [`question-identifier`](skills/question-identifier/SKILL.md), [`methodology-extractor`](skills/methodology-extractor/SKILL.md), [`empirical-spec-parser`](skills/empirical-spec-parser/SKILL.md), [`criticizer`](skills/criticizer/SKILL.md) |
+| Coder | [`strategy-implementer`](skills/strategy-implementer/SKILL.md), [`backtest-pitfall-guard`](skills/backtest-pitfall-guard/SKILL.md), [`consult-reader`](skills/consult-reader/SKILL.md), [`coder-source-grounding`](skills/coder-source-grounding/SKILL.md), [`coder-doubt-driven`](skills/coder-doubt-driven/SKILL.md), [`coder-test-first`](skills/coder-test-first/SKILL.md), [`coder-incremental-implementation`](skills/coder-incremental-implementation/SKILL.md), [`coder-debugging-recovery`](skills/coder-debugging-recovery/SKILL.md), [`coder-self-review`](skills/coder-self-review/SKILL.md) |
+| Bench | [`strategy-evaluator`](skills/strategy-evaluator/SKILL.md), [`robustness-auditor`](skills/robustness-auditor/SKILL.md) |
+| Reviewer | [`claims-vs-results-analyzer`](skills/claims-vs-results-analyzer/SKILL.md), [`report-compiler`](skills/report-compiler/SKILL.md) |
+
+The Coder also has access to the vendored engineering skill library under
+[`skills/engineering/`](skills/engineering/README.md).
+
+#### Domain Reader Skills
+
+Domain readers provide progressive-disclosure expertise for specialized
+papers. They are intended for Scout routing, Reader extraction, and Reviewer
+critique when a skill-supporting host discovers them.
+
+| Skill | Domain focus |
+| --- | --- |
+| [`factor-reader`](skills/factor-reader/SKILL.md) | Cross-sectional factors, anomalies, factor alpha, costs, and post-publication decay |
+| [`macro-and-rates-reader`](skills/macro-and-rates-reader/SKILL.md) | Macro, fixed income, monetary policy, yield curves, and rates strategies |
+| [`microstructure-reader`](skills/microstructure-reader/SKILL.md) | Tick data, order books, market making, execution, impact, and venue mechanics |
+| [`options-reader`](skills/options-reader/SKILL.md) | Options, volatility surfaces, exotics, pricing, calibration, and hedging |
+| [`optimization-reader`](skills/optimization-reader/SKILL.md) | Financial optimization, constraints, uncertainty, solvers, and validation |
+| [`ml-in-finance-reader`](skills/ml-in-finance-reader/SKILL.md) | ML/DL for markets, temporal leakage, low-signal overfitting, foundation models, generative and graph models, agents, credible OOS Sharpe, and an 84-PDF reference corpus |
+
+See [`skills/README.md`](skills/README.md) for the complete skills catalog and
+consumption details.
+
+### How Agent Skills Are Consumed
+
+The top-level `llm.skills_dir` config controls the Agent Skills root.
+
+- **API mode**, the default: the five core agent `SKILL.md` bodies are
+  prepended to their model system prompts.
+- **Harness mode**: an agent-host CLI receives the composed prompt and can
+  additionally discover relevant task and domain skills natively.
+- **Progressive disclosure**: task and domain skills remain available without
+  being injected into every unrelated call.
+
+Set `llm.skills_dir: ""` to disable core Agent Skill injection.
+
+## LLM and Fallback Orchestration
+
+Every LLM call routes through the provider-agnostic seam in
+[`src/quantbench_crew/llm.py`](src/quantbench_crew/llm.py).
+
+The shipped config uses per-agent providers:
+
+| Agent | Default provider | Environment variable |
+| --- | --- | --- |
+| Scout | Grok / xAI | `XAI_API_KEY` or `GROK_API_KEY` |
+| Reader | Gemini | `GEMINI_API_KEY` or `GOOGLE_API_KEY` |
+| Coder | Anthropic Claude | `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` |
+| Bench | DeepSeek | `DEEPSEEK_API_KEY` |
+| Reviewer | OpenAI | `OPENAI_API_KEY` |
+
+Provider modes:
+
+- `per-agent`: route each agent to its configured provider;
+- `none`: force deterministic offline behavior;
+- `stub`: replay recorded fixtures by request fingerprint;
+- a provider name such as `openai` or `deepseek`: use one provider for all
+  agents.
+
+Missing credentials, unavailable optional dependencies, or failed live calls
+fall back at the affected agent boundary. Other agents continue running.
+Calls record provider, model, token counts, estimated cost, and request
+fingerprint in the manifest. A shared per-paper `cost_cap_usd` bounds live
+generation.
+
+Copy [`.env.example`](.env.example) to see the supported API-key ports.
+
+## Running Workflows
+
+### Review Papers
 
 ```bash
+quantbench run [options]
+# Equivalent:
+python -m quantbench_crew.main run [options]
+```
+
+Useful examples:
+
+```bash
+# Built-in local sample papers, fully offline.
+quantbench run --source local --max-papers 2
+
+# Local JSON paper records.
+quantbench run --paper-json tests/fixtures/golden_paper.json --max-papers 1
+
+# Live arXiv q-fin search.
 quantbench run --source arxiv --query "cross-sectional momentum" --max-papers 5
-quantbench run --source neurips --query "portfolio optimization" --year 2024 --max-papers 5
-quantbench run --source jfe --query "momentum" --max-papers 3
-quantbench run --source conferences --query "return prediction" --max-papers 8
+
+# Search a venue or venue group.
+quantbench run --source neurips --query "portfolio optimization" --year 2024
+quantbench run --source journals --query-pool auto --max-papers 8
+
+# Use a copied and edited agent configuration.
+quantbench run \
+  --paper-json tests/fixtures/golden_paper.json \
+  --agents-config my-agents.yaml \
+  --max-papers 1
 ```
 
-**Track fresh papers without running the full reproduction pipeline:**
+Key `run` flags:
+
+| Flag | Default | Purpose |
+| --- | --- | --- |
+| `--source` | `local` | Local records, arXiv, a conference, a journal, or a venue group |
+| `--query` | `quantitative finance` | One search query for non-local sources |
+| `--query-pool` | unset | Curated multi-query pool; mutually exclusive with `--query` |
+| `--year` | unset | Restrict conference or journal search to a year |
+| `--max-papers` | `2` | Maximum papers processed |
+| `--paper-json` | unset | Local JSON list of paper records |
+| `--agents-config` | `configs/agents.yaml` | Agent, skill, LLM, and charter config |
+| `--benchmark-config` | `configs/benchmarks.yaml` | Benchmark defaults |
+| `--runs-dir` | `runs` | Manifest and artifact root |
+| `--report-dir` | `reports` | Human-readable report root |
+| `--no-write-reports` | off | Print reports without writing `reports/` files |
+| `--no-dedup` | off | Disable the persistent processed-paper watermark |
+
+### Track New Papers
 
 ```bash
 quantbench track \
@@ -158,323 +418,268 @@ quantbench track \
   --query-pool auto
 ```
 
-`track` strictly filters on day-level online dates, deduplicates across
-sources, ranks with Scout's research-value scorer, and upserts
-`data/processed/paper_queue.json` while preserving prior human status and
-notes. Sources that only expose a year are reported as missing an exact date
-instead of being silently included.
+Tracking requires exact inclusive dates. Sources lacking a day-level online
+date are reported separately rather than silently included.
 
-Conferences (KDD, ICML, ICLR, WSDM, AAAI, IJCAI, WWW, NeurIPS) are searched
-via DBLP's canonical venue streams, with abstracts and open-access PDF links
-enriched from OpenAlex in one batched DOI lookup; journals (Journal of
-Finance, Journal of Financial Economics, Review of Financial Studies) are
-searched via OpenAlex filtered by ISSN. DBLP is keyless; OpenAlex now expects
-a free `OPENALEX_API_KEY` for useful API quota. Without one the adapter still
-attempts the request, and every source falls back to deterministic offline
-placeholders when the network or provider rejects it.
-
-Two search-semantics notes: conference queries match paper **titles** (DBLP
-indexes titles, not abstracts), so prefer short title-like terms ("portfolio",
-"stock prediction") over phrases; journal queries match full metadata
-including abstracts. Papers without a DOI (common for NeurIPS proceedings)
-cannot be abstract-enriched and arrive title-only; the finance journals are
-paywalled, so expect metadata + abstract rather than full-text PDFs unless a
-paper has an open-access copy.
-
-**Curated query pools.** Instead of a single `--query`, `--query-pool` fans
-the paper budget across a curated term list with cross-term dedup (each hit
-records the term that found it in `raw["query"]`). Pools are matched to
-source semantics — `finance` (empirical asset pricing, market microstructure,
-momentum strategy, …) for JF/JFE/RFS; `general-ai` (LLM trading bots,
-multi-agent simulation, algorithmic trading, …) for AAAI/IJCAI; `core-ml`
-(time-series foundation models, Mamba, diffusion models, deep RL, …) for
-ICML/ICLR/NeurIPS; `data-mining` (GNNs, sentiment analysis, spatiotemporal
-forecasting, …) for KDD/WSDM/WWW; plus seven high-yield `roots` (portfolio,
-asset pricing, time series, trading, stock, volatility, alpha). `auto`
-resolves each venue to its matched pool, so one command scouts every venue
-with the right vocabulary:
+### Browse Query Pools
 
 ```bash
-quantbench queries                                           # browse the pools
+quantbench queries
 quantbench run --source conferences --query-pool auto --max-papers 16
 quantbench run --source jfe --query-pool finance/market-mechanics --max-papers 5
 quantbench run --source neurips --query-pool core-ml/generative-synthetic --year 2024
 ```
 
-### 4. Configuration (`configs/agents.yaml`)
+Pools include finance, general AI, core ML, data mining, and broad root terms.
+`auto` selects a pool appropriate to each venue.
 
-The top-level `llm:` section configures the one seam every LLM call routes
-through. The shipped default is **per-agent backbones**: each agent gets its
-own provider, matched to the agent's job:
+## Paper Sources
 
-```yaml
-llm:
-  provider: per-agent     # none | stub | per-agent | <single provider name>
-  model: claude-opus-4-8  # default for single-provider modes
-  fixtures: tests/fixtures/llm_fixtures.json   # stub provider replays these
-  cost_cap_usd: 2.0       # per-paper spend cap across ALL backbones
-  agents:
-    quant_scout:    {provider: grok,      model: grok-4}
-    quant_reader:   {provider: gemini,    model: gemini-2.5-pro}
-    quant_coder:    {provider: anthropic, model: claude-opus-4-8}
-    quant_bench:    {provider: deepseek,  model: deepseek-chat}
-    quant_reviewer: {provider: openai,    model: gpt-5}
-```
+Supported sources include:
 
-| Agent | Backbone | Port (API-key env var) | Why this match |
-| --- | --- | --- | --- |
-| scout | Grok (xAI) | `XAI_API_KEY` (or `GROK_API_KEY`) | discovery/triage of fresh papers; real-time orientation, cheap bulk scoring |
-| reader | Gemini | `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | long-document method/claim extraction; long context |
-| coder | Claude | `ANTHROPIC_API_KEY` (or `ANTHROPIC_AUTH_TOKEN`) | strongest code generation; synergy with the headless-Claude agent adapter |
-| bench | DeepSeek | `DEEPSEEK_API_KEY` | numeric/statistical interpretation; strong math reasoning at low cost |
-| reviewer | GPT (OpenAI) | `OPENAI_API_KEY` | final synthesis and red-team critique; balanced general reasoning |
+- local JSON records and built-in sample papers;
+- arXiv q-fin categories;
+- conferences: KDD, ICML, ICLR, WSDM, AAAI, IJCAI, WWW, NeurIPS;
+- journals: Journal of Finance, Journal of Financial Economics, Review of
+  Financial Studies;
+- grouped sources: `conferences`, `journals`.
 
-Copy `.env.example` for the full list of ports. Per-agent entries also accept
-`api_key_env:` (route a key from a custom variable) and `base_url:` (point a
-provider at a proxy or compatible endpoint); GPT/Gemini/Grok/DeepSeek are
-served by one stdlib HTTP adapter (no extra packages), while Claude uses the
-official SDK (`pip install anthropic`). Model names are operator-editable
-defaults.
+Conference search uses DBLP canonical venue streams and enriches DOI-linked
+records through OpenAlex. Journal search uses OpenAlex metadata. Set
+`OPENALEX_API_KEY` for useful quota.
 
-**Fallback contract.** Backbones are availability-checked when a run starts
-(key present, SDK importable) and every live call is guarded: if an agent's
-provider is missing, unreachable, or errors mid-call, **that agent alone**
-drops to its deterministic offline fallback and the reason is recorded in the
-run manifest — the other four agents keep their backbones. With no keys at
-all, the shipped config degrades to exactly the offline dry workflow. Every
-live call is logged to the manifest with agent, provider, model, tokens, and
-cost; the single `cost_cap_usd` is enforced across all backbones per paper.
+When a live source is unavailable, adapters expose the failure and use
+deterministic placeholders where supported. Placeholder evidence forces a
+`scaffold-only` review rather than a research conclusion.
 
-Other provider modes: `none` (force everything offline), `stub` (replay
-recorded fixtures keyed by request fingerprint — tests/CI), or a single
-provider name (e.g. `provider: deepseek`) to run every agent on one backbone.
+## Configuration
 
-**Agent Skills (SKILL.md).** Each agent has an instruction document in the
-open [Agent Skills](https://agentskills.io) format under
-[skills/](skills/README.md) — `quant-scout` … `quant-reviewer` — teaching its
-backbone the job's conventions (extraction rules, sandbox constraints,
-verdict gates). They are consumed two ways, set per agent:
+[`configs/agents.yaml`](configs/agents.yaml) is the main control plane. It
+defines:
 
-- **`mode: api` (route 2, the default)** — the router prepends the agent's
-  skill body to the system prompt of every single-shot call. Works with all
-  five providers; no harness needed. Disable globally with `skills_dir: ""`.
-- **`mode: harness` (route 1, opt-in, anytime)** — drive a skill-supporting
-  agent-host CLI instead of the bare API. Default command is headless Claude
-  Code; point `harness_command` at any standard-compliant host
-  (`["claude", "-p", "{prompt}", "--model", "{model}"]` — placeholders
-  `{prompt}`/`{system}`/`{model}` are substituted). A host missing from PATH
-  or a failed invocation falls back offline for that agent like any other
-  backbone failure. CLI hosts don't report tokens, so harness calls log zero
-  cost — bound them with iteration budgets.
+- per-agent roles and model providers;
+- the research charter;
+- runtime skill enablement and settings;
+- code-generation budgets;
+- walk-forward windows, embargo, costs, datasets, and robustness thresholds.
+
+Enable a runtime skill by copying the config and changing its entry:
 
 ```yaml
-    quant_coder:                  # example: flip the coder to route 1
-      provider: anthropic
-      mode: harness
-      harness_command: ["claude", "-p", "{prompt}", "--model", "{model}"]
+agents:
+  quant_bench:
+    skills:
+      dataset_registry:
+        enabled: true
+        dataset: planted_momentum
+        params: {}
+      walk_forward:
+        enabled: true
+        train_periods: 36
+        test_periods: 12
+        embargo: 1
+        cost_bps: 10.0
 ```
 
-Editing a SKILL.md changes the system prompt and therefore request
-fingerprints — re-record stub fixtures for that agent after edits. (These
-skill files are unrelated to the runtime plug-ins below; see
-[skills/README.md](skills/README.md).)
+Enabled runtime skills require a runs directory because their results and
+artifacts are part of the reproducibility claim.
 
-`quant_scout.charter` defines what research is in scope (purpose, themes,
-must-haves, exclusions); when the `charter_relevance` skill is enabled it
-dominates the keyword ranking. Note `OPENAI_API_KEY` does double duty: it is
-also PaperQA2's default backend for full-text reading, separately from the
-reviewer's backbone.
+## Evidence, Artifacts, and Manifests
 
-Per-agent skills (all shipped `enabled: false` except `code_generation`,
-which is on by default so reports ship a generated strategy module):
-
-| Agent | Skill | When enabled |
-| --- | --- | --- |
-| scout | `charter_relevance` | score candidates against the research charter; boost ranking |
-| scout | `relevance_scorer` | multi-dimensional research-value ranking: charter fit, evidence, implementability, economics, and information gain |
-| scout | `reproducibility_triage` | data-tier classification (public/vendor/proprietary) + feasibility score; gates papers below `threshold` |
-| reader | `pdf_acquisition` | resolve arXiv URL → cached PDF under `cache_dir` so PaperQA2 engages |
-| reader | `method_spec_extraction` | schema-validated MethodSpec (LLM/full-text → metadata fallback), confidence recorded |
-| reader | `target_table_extraction` | enumerate falsifiable claims into a ReproductionTarget with tolerance bands |
-| reader | `red_flag_scan` | detect quant pitfalls (no costs, in-sample tuning, survivorship, microcaps, short sample, snooping) |
-| coder | `code_generation` | ERA search over candidate modules; `adapter: complete` (single-shot LLM) or `agent` (headless Claude Code, used when available, otherwise falls back) |
-| coder | `metric_synthesis` | code paper-claimed metrics the built-in suite lacks; sandbox-validated, then computed by the bench on the OOS returns (`max_metrics` caps spend) |
-| coder | `consult_reader` | detect performance-affecting MethodSpec gaps and ask the **Reader** (not a guess) to close them; emits `reader_consultation.json` (`resolve` routes to the reader backbone) |
-| bench | `dataset_registry` | load + provenance-hash the configured `dataset` into the manifest |
-| bench | `walk_forward` | purged/embargoed walk-forward vs baselines; deflated Sharpe; spanning (set `factors_path`); claim comparison |
-| reviewer | `rubric_verdict` | evidence-linked rubric + red-team checklist → honest verdict |
-
-Enabled skills record results in manifests, so a runs directory is required
-(the default `runs/` satisfies this).
-
-The Coder also carries an expert-enhanced open-format skill family — two
-transcript-distilled skills (`strategy-implementer`, `backtest-pitfall-guard`),
-a cross-agent `consult-reader` oracle, and six engineering reskins — plus a
-verbatim, MIT-licensed copy of
-[addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) under
-`skills/engineering/`. See [skills/README.md](skills/README.md) and
-[docs/coder-skills.md](docs/coder-skills.md).
-
-### 5. Data
-
-Everything under `data/raw/` and `data/processed/` is gitignored. The dataset
-registry (`quantbench_crew.datasets.registry`) resolves these names, each
-content-hashed and versioned into the manifest:
-
-| Dataset name | Source | Notes |
-| --- | --- | --- |
-| `planted_momentum` | synthetic | persistent cross-sectional drift; momentum *must* work here |
-| `pure_noise` | synthetic | zero-mean iid returns; nothing may "reproduce" here |
-| `french_momentum` | `data/raw/french_momentum_monthly.csv` | Kenneth French momentum portfolios; long CSV `YYYYMM,portfolio,return_pct` |
-| `crsp` | `data/raw/stock/` | CRSP CIZ daily flat files → point-in-time monthly panel |
-
-The CRSP loader streams the daily file with the stdlib `csv` module (no
-pandas; ~8s for 683 MB), compounds daily to monthly returns, builds a
-survivorship-bias-free universe by construction, splices delisting returns
-(`DelRet`) into each name's final month, applies configurable common-stock /
-exchange / price / cap-percentile filters, and derives price/volume
-characteristics (cap, dollar volume, return vol, max daily return). Expected
-files:
-
-```
-data/raw/stock/daily_stock_file_15-24.csv        # PERMNO,DlyCalDt,DlyRet,DlyCap,DlyPrc,DlyPrcVol,PrimaryExch,SecurityType,ShareType,...
-data/raw/stock/delisting_information_15-24.csv   # PERMNO,DelistingDt,DelRet,...
-data/raw/ff_factors_monthly.csv                  # optional: YYYYMM + FF5/MOM columns (percent) for spanning
-```
-
-### 6. Benchmarking and statistics
-
-The walk-forward protocol refits per train window and evaluates strictly
-out-of-sample, with a purge gap (sized to the strategy's formation window) and
-an embargo between folds. Each candidate is compared against equal-weight,
-buy-and-hold, and a **random-matched-turnover null** — random selection with
-the candidate's sizing, so it pays the same costs while carrying no signal.
-
-Metrics are frequency-aware (monthly data annualizes with √12, not √252) and
-net of a linear cost model (`cost_bps` per unit turnover). The built-in suite
-computed on every walk-forward (net series unless noted): mean return,
-volatility, Sharpe, **annualized return**, **maximum drawdown**, **Calmar
-ratio**, **Sortino ratio**, **expected shortfall** (CVaR, 5% tail),
-**directional accuracy** (hit rate), **profit factor**, **tail ratio**
-(|q95|/|q5|), **gross PnL** and **net PnL** (cumulative, unit-notional),
-average turnover, and the **position distribution** (average long/short
-position counts and weight concentration). Paper claims map onto these via a
-generous alias table (e.g. `CVaR`, `MDD`, `hit rate`, `PnL` all resolve), so
-a paper quoting any of them is claim-compared immediately. On top:
-
-- **Deflated Sharpe ratio** (Bailey–López de Prado): haircuts the observed
-  Sharpe by the manifest's trial count and trial dispersion; reported with a
-  p-value.
-- **Factor spanning**: pure-Python OLS of candidate returns on FF5+momentum;
-  alpha, t-stat, betas, R², residual Sharpe.
-- **Robustness**: split-sample/rolling subsample Sharpes (sign stability) and
-  parameter-sensitivity sweeps.
-- **Claim comparison**: achieved metrics vs the paper's extracted claims
-  within per-claim tolerance bands — reported as a sanity band, never used as
-  an optimization objective.
-- **Metric synthesis** (coder procedure): when a paper claims a metric the
-  suite doesn't know (say, an Omega ratio), the coder's backbone generates a
-  `compute_metric(returns, periods_per_year)` module for it, the sandbox
-  AST-gates and validates it on a fixed series, and the bench executes it —
-  sandboxed, never host-side — on the candidate's out-of-sample net returns.
-  The value lands in the achieved metrics under the claim's normalized name,
-  so the claim still gets compared. Offline (no coder LLM), the gap is
-  recorded honestly instead: "no achieved metric mapped".
-
-The reviewer only says **promising** when the candidate beats the random
-null, survives deflation, is sign-stable across subsamples, and carries no
-critical red flag; placeholder data anywhere forces **scaffold-only**.
-
-### 7. Code generation and the sandbox
-
-The coder runs an ERA Flat-UCB search whose `generate_fn` emits candidate
-strategy modules and whose `execute_fn` scores them in a sandbox against
-deterministic test templates: shape, determinism, no-lookahead (weights at *t*
-must not change when post-*t* data is perturbed), plus construction-aware
-invariants derived from the MethodSpec (e.g. long-short ⇒ zero net weight).
-The deterministic fallback candidate is the hand-written reference momentum
-strategy, so the search's worst case is a known-good implementation.
-
-Untrusted candidate code never executes in the host interpreter. The sandbox
-([code_runner.py](src/quantbench_crew/tools/code_runner.py)) layers an AST
-gate (import allowlist; `eval`/`exec`/`open`/`getattr`/dunder access banned)
-over an isolated subprocess (`-s -P -B`, scrubbed environment, CPU/memory/
-file-size/process rlimits, pinned hash seed). A vetted numeric allowlist
-(numpy/pandas/sklearn/scipy) can be opted into for generated ML strategies;
-the stdlib-only allowlist stays the default. Generated strategies can also be
-backtested *inside* the sandbox (`benchmarks/sandbox_backtest.py`), so even
-benchmarking never trusts generated code host-side.
-
-Two generation adapters share the seam: `complete` (single-shot emission
-through the LLM client) and `agent` (headless Claude Code generate-test-fix
-loop, used only when the CLI and credentials are present, otherwise it falls
-back loudly). Both are bounded by the per-paper cost cap.
-
-### 8. Reproducibility and manifests
-
-Every paper run writes `runs/<run_id>/manifest.json`: config hash, every
-skill result, every LLM call (model/tokens/cost), seeds, dataset provenance
-(name/version/content hash), and artifact hashes (generated code, benchmark
-JSON, the report itself).
-
-Determinism is two-tier:
-
-- the stdlib dry workflow is **bit-exact** — rerunning on identical inputs
-  yields an identical manifest `content_hash` (volatile fields excluded);
-- real-data/numeric paths are **tolerance-banded** — pinned seeds and banded
-  assertions rather than hash equality.
-
-### 9. Evaluation set and tests
-
-The system regression-tests *itself* against curated cases with hand-labeled
-expected outcomes (`pytest -m eval`, deselected by default):
-
-| Case | Data | Expected | Why |
-| --- | --- | --- | --- |
-| `momentum_planted` | synthetic planted drift | reproduces | the harness must find a real signal |
-| `noise_control` | pure noise | does **not** reproduce | negative control: over-claiming fails CI |
-| `momentum_crsp` | CRSP 2015–2024 | does **not** reproduce | JT momentum didn't persist at claimed magnitude in this decade — honest ground truth |
-| `gkx_ml_crsp` | CRSP 2015–2024 | does **not** reproduce | GKX-style linear ML beats the null (Sharpe ≈ 0.4) but fails deflation on the price/volume feature subset |
-
-That last row is the project's thesis in miniature: the system beats the null
-yet *declines* to claim a reproduction, because the deflated-Sharpe bar is not
-cleared. Suite totals: **223 tests** (fast suite + `e2e` + `eval` markers);
-CRSP-backed cases skip automatically when the data is absent.
-
-### 10. Repository layout
+Each paper gets one run directory:
 
 ```text
-configs/                  agents.yaml (skills + llm + charter), benchmarks.yaml
-data/raw|processed/       market data + caches (gitignored)
-docs/                     architecture.md, skills-design.md, phase2-design.md, phase2-status.md
-runs/                     per-run manifests + artifacts (gitignored)
-reports/                  review .md + generated _strategy.py (on by default; gitignored)
-src/quantbench_crew/
-  agents/                 the five agents + the ERA search
-  skills/                 registry + per-agent skill implementations
-  benchmarks/             Strategy contract, PanelData, walk-forward, baselines,
-                          metrics, statistics (DSR), spanning, robustness, claims,
-                          strategies registry, sandboxed backtest
-  datasets/               registry, synthetic worlds, French + CRSP loaders, eval set
-  tools/                  arXiv client + dedup, sandbox runner, parsers
-  llm.py                  provider-agnostic LLM seam (none/stub/anthropic, cost log)
-  artifacts.py            run manifest + artifact store (content hashing)
-  prompts/                prompt templates
-tests/                    223 tests incl. e2e and eval markers
+runs/<run-id>/
+  manifest.json
+  report.md
+  generated/
+    strategy.py
+    template_tests.py
+    candidates.json
+  benchmark/
+    walk_forward.json
+    strategy_evaluation.json
+    robustness_audit.json
+  review/
+    claims_vs_results.json
+    compiled_report.md
+    compiled_report.json
 ```
 
-### 11. Project status and docs
+`manifest.json` is always written for a manifest-backed run, and `report.md`
+is written for completed reviews. Other artifacts appear only when their
+owning stages and runtime skills execute.
 
-Phases 1 and 2 of the design are complete (tickets QB-01…QB-35). Read, in
-order: [docs/skills-design.md](docs/skills-design.md) (Phase 1 design),
-[docs/phase2-design.md](docs/phase2-design.md) (Phase 2 design + as-built
-empirical findings), [docs/phase2-status.md](docs/phase2-status.md) (current
-status). Known gaps: value/profitability sorts and the full nonlinear GKX
-reproduction need Compustat fundamentals; Phase 3 (parallel runs, LLM
-caching, human-in-the-loop checkpoints) is unstarted.
+The manifest records:
+
+- config hash;
+- every runtime `SkillResult`;
+- every LLM call fingerprint, provider, model, tokens, and cost;
+- seeds;
+- artifact paths and SHA-256 hashes;
+- a deterministic `content_hash` excluding volatile run identity fields.
+
+The manifest is the run's reproducibility ledger. Failed and discarded trials
+belong in it; hiding them would invalidate selection-bias corrections.
+
+## Benchmarking Discipline
+
+When the real Bench skills are enabled, QuantBench Crew evaluates a trusted
+strategy through purged and embargoed walk-forward windows.
+
+### Baselines and Nulls
+
+The candidate is compared with:
+
+- equal weight;
+- buy and hold;
+- a random matched-turnover null that pays comparable trading costs.
+
+Beating the random matched-turnover null is the minimum evidence floor.
+
+### Metrics
+
+Metrics are frequency-aware and net of a linear turnover-cost model. The
+built-in suite includes:
+
+- mean return, volatility, Sharpe, annualized return;
+- maximum drawdown, Calmar, Sortino, expected shortfall;
+- directional accuracy, profit factor, and tail ratio;
+- gross and net cumulative PnL;
+- average turnover and position-distribution diagnostics.
+
+Additional paper-claimed metrics can be synthesized by the Coder, sandbox
+validated, and computed on the OOS return series.
+
+### Statistical and Economic Checks
+
+- **Deflated Sharpe** reads the full trial count from the manifest.
+- **Factor spanning** can regress returns on FF5 plus momentum.
+- **Capacity** provides a first-order turnover and liquidity sanity check.
+- **Robustness** checks subsamples and parameter sensitivity.
+- **Claim comparison** compares achieved metrics with extracted paper claims;
+  tolerance bands are never optimization targets.
+- **Strategy evaluation** can require success in planted-signal worlds and
+  failure in pure-noise worlds.
+
+## Code Generation and Sandbox
+
+The Coder uses ERA-style Flat UCB search over candidate strategy modules.
+Candidate quality is scored by deterministic template tests and a small
+structural prior.
+
+Before execution, generated code passes an AST gate. The sandbox blocks file
+and network access, dangerous built-ins, unapproved imports, dunder access,
+and unbounded host execution. It runs candidates in an isolated subprocess
+with scrubbed environment variables and resource limits.
+
+Template tests enforce:
+
+- valid Strategy shape;
+- deterministic output;
+- no lookahead under future-data mutation;
+- construction invariants such as long-short neutrality;
+- finite weights and sensible warmup behavior.
+
+Numeric imports such as numpy, pandas, and scikit-learn require the optional
+numeric tier and explicit sandbox allowlisting.
+
+## Datasets
+
+The dataset registry hashes and versions every loaded dataset:
+
+| Name | Source | Intended use |
+| --- | --- | --- |
+| `planted_momentum` | Synthetic | Positive control where momentum should work |
+| `pure_noise` | Synthetic | Negative control where no strategy should reproduce |
+| `french_momentum` | Kenneth French CSV | Public momentum portfolio benchmark |
+| `crsp` | Local CRSP CIZ flat files | Point-in-time US equity evaluation |
+
+Expected optional real-data paths:
+
+```text
+data/raw/french_momentum_monthly.csv
+data/raw/stock/daily_stock_file_15-24.csv
+data/raw/stock/delisting_information_15-24.csv
+data/raw/ff_factors_monthly.csv
+```
+
+The CRSP loader compounds daily observations to monthly returns, retains
+delisting information, applies configurable universe filters, and derives
+price and volume characteristics without pandas.
+
+Everything under `data/raw/` and `data/processed/` is gitignored.
+
+## Installation
+
+Recommended:
+
+```bash
+conda env create -f environment.yml
+conda activate quantbench-crew
+```
+
+Minimal editable install:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+Optional tiers:
+
+| Install | Enables |
+| --- | --- |
+| `pip install -e ".[paperqa]"` | PaperQA2 full-text reading |
+| `pip install -e ".[numeric]"` | numpy, pandas, and scikit-learn paths |
+| `pip install anthropic` | Live Anthropic provider |
+
+Python 3.11 or newer is required.
+
+## Tests and System Evaluation
+
+```bash
+pytest              # default suite; slow eval cases are deselected
+pytest -m e2e       # end-to-end golden-paper and synthetic-noise gates
+pytest -m eval      # curated system regression cases; may require CRSP
+```
+
+The curated evaluation set includes positive and negative controls. A useful
+research system must find planted signal and also decline to reproduce pure
+noise or fragile real-market results.
+
+## Repository Layout
+
+```text
+configs/                    agent, skill, LLM, and benchmark configuration
+data/raw|processed/         optional market data, caches, and research queue
+docs/                       architecture and design notes
+reports/                    human-readable reviews and exported strategies
+runs/                       per-paper manifests and evidence artifacts
+skills/                     open-format Agent Skills and reference corpora
+src/quantbench_crew/
+  agents/                   Scout, Reader, Coder, Bench, Reviewer, ERA search
+  skills/                   executable runtime skill registry and implementations
+  benchmarks/               contracts, protocols, metrics, statistics, sandbox backtest
+  datasets/                 synthetic, French, CRSP, and evaluation datasets
+  tools/                    search adapters, parsers, queue, and sandbox runner
+  llm.py                    provider routing, fixtures, harness mode, and cost logging
+  artifacts.py              manifest and content-hashed artifact store
+tests/                      unit, integration, end-to-end, and eval tests
+```
+
+## Further Reading
+
+- [`skills/README.md`](skills/README.md): complete Agent Skills catalog
+- [`docs/coder-skills.md`](docs/coder-skills.md): Coder skill family
+- [`docs/architecture.md`](docs/architecture.md): concise architecture note
+- [`docs/skills-design.md`](docs/skills-design.md): runtime skill design
+- [`docs/phase2-design.md`](docs/phase2-design.md): Phase 2 design and findings
+- [`docs/phase2-status.md`](docs/phase2-status.md): implementation status
 
 ## Disclaimer
 
 QuantBench Crew is a research-support tool. Outputs must be reviewed by
 qualified human researchers before being used in any investment, trading,
-risk management, or production decision-making process.
+risk-management, or production decision.
