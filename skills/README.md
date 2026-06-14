@@ -92,6 +92,15 @@ for source-grounded extraction or adversarial domain critique. It is
 progressively disclosed through native skill discovery and is not injected
 into unrelated default API calls.
 
+`optimization-reader/` is a cross-agent domain-expert skill for optimization
+methods used in portfolio construction, portfolio management, and other
+financial decisions. Scout should identify and route papers whose central
+contribution depends on the formulation, uncertainty model, constraints,
+solver, or validation of an optimization problem; Reader or Reviewer can then
+invoke the skill for source-grounded extraction or adversarial mathematical,
+computational, and economic critique. It is progressively disclosed through
+native skill discovery and is not injected into unrelated default API calls.
+
 ## Vendored engineering library
 
 `engineering/` is a verbatim, MIT-licensed copy of

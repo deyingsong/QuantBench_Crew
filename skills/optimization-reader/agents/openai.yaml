@@ -1,0 +1,4 @@
+interface:
+  display_name: "Financial Optimization Research Reader"
+  short_description: "Review financial optimization models and solvers"
+  default_prompt: "Use $optimization-reader to analyze this financial optimization paper's economic formulation, constraints, uncertainty model, solver evidence, implementation, and validation."
