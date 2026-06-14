@@ -1,0 +1,4 @@
+interface:
+  display_name: "ML in Finance Reader"
+  short_description: "Audit market ML papers and OOS performance"
+  default_prompt: "Use $ml-in-finance-reader to audit this market-ML paper for temporal leakage, overfitting, and credible out-of-sample performance."

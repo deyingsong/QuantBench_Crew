@@ -101,6 +101,16 @@ invoke the skill for source-grounded extraction or adversarial mathematical,
 computational, and economic critique. It is progressively disclosed through
 native skill discovery and is not injected into unrelated default API calls.
 
+`ml-in-finance-reader/` is a cross-agent domain-expert skill for machine
+learning and deep learning applied to markets, including time-series and
+sequence models, foundation models, generative models, state-space and graph
+models, explainable AI, multimodal systems, and agents. Scout should route
+papers whose central contribution depends on these methods; Reader or Reviewer
+can then invoke the skill to audit temporal splits, point-in-time features,
+leakage, low-signal overfitting, baselines, implementation realism, and
+genuinely out-of-sample Sharpe. It is progressively disclosed through native
+skill discovery and is not injected into unrelated default API calls.
+
 ## Vendored engineering library
 
 `engineering/` is a verbatim, MIT-licensed copy of
