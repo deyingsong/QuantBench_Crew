@@ -1,18 +1,20 @@
 # Agent and skill configuration.
 #
 # Skills are declared per agent under `skills:` and toggled with `enabled`.
-# All skills ship disabled: the deterministic dry workflow is the permanent
-# baseline, and enabling a skill must never be required for the pipeline to
-# run. Disabled entries may name skills that are not implemented yet.
+# Skills remain offline-safe: each enabled skill must either use the configured
+# LLM/data port or record a deterministic fallback in the run manifest. This
+# default config runs the evidence-producing research path; set `enabled: false`
+# on individual skills for the minimal dry scaffold.
 #
 # The top-level `llm:` section configures the shared LLM client seam.
 # `provider: none` keeps runs free of network and API-key dependencies;
-# `stub` replays recorded fixtures; `anthropic` calls the live API.
+# `stub` replays recorded fixtures; `openai` calls the live API with the
+# single `OPENAI_API_KEY` most users configure first.
 
 # provider: none | stub | per-agent | openai | gemini | anthropic | grok | deepseek
 #
-# `per-agent` (the default) gives each agent its own backbone, matched to the
-# agent's job (see `agents:` below). Each backbone reads its API key from the
+# `per-agent` gives each agent its own backbone, matched to the agent's job
+# (see `agents:` below). Each backbone reads its API key from the
 # provider's environment variable "port" (override with `api_key_env`, point
 # at a proxy with `base_url`):
 #   openai -> OPENAI_API_KEY        gemini   -> GEMINI_API_KEY (or GOOGLE_API_KEY)
@@ -33,8 +35,8 @@
 #                  harness_command at codex/gemini/any standard host
 # Set `skills_dir: ""` to disable skill injection entirely.
 llm:
-  provider: per-agent
-  model: claude-opus-4-8          # default for single-provider modes
+  provider: openai
+  model: gpt-5                    # default for single-provider modes
   max_tokens: 4096
   fixtures: tests/fixtures/llm_fixtures.json   # stub provider only
   cost_cap_usd: 2.0
@@ -126,23 +128,23 @@ agents:
       - future_directions
     skills:
       pdf_acquisition:
-        enabled: false
+        enabled: true
         cache_dir: data/raw
       question_identifier:
-        enabled: false
+        enabled: true
       methodology_extractor:
-        enabled: false
+        enabled: true
       empirical_spec_parser:
-        enabled: false
+        enabled: true
       criticizer:
-        enabled: false
+        enabled: true
       target_table_extraction:
-        enabled: false
+        enabled: true
         default_tolerance: 0.2
       method_spec_extraction:
-        enabled: false
+        enabled: true
       red_flag_scan:
-        enabled: false
+        enabled: true
   quant_coder:
     role: ERA-backed reproducible implementation planning
     search_algorithm: Flat UCB Tree Search
@@ -179,11 +181,11 @@ agents:
       - max_drawdown
     skills:
       dataset_registry:
-        enabled: false
+        enabled: true
         dataset: planted_momentum   # planted_momentum | pure_noise | french_momentum | crsp
         params: {}
       walk_forward:
-        enabled: false
+        enabled: true
         train_periods: 36
         test_periods: 12
         embargo: 1
@@ -221,8 +223,8 @@ agents:
       - weak
     skills:
       rubric_verdict:
-        enabled: false
+        enabled: true
       claims_vs_results_analyzer:
-        enabled: false
+        enabled: true
       report_compiler:
-        enabled: false
+        enabled: true

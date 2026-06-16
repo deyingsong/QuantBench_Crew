@@ -499,9 +499,29 @@ class ManifestLoggingClient:
         model: str | None = None,
         max_tokens: int = DEFAULT_MAX_TOKENS,
     ) -> LLMResponse:
-        response = self._inner.complete(
-            prompt, system=system, model=model, max_tokens=max_tokens
-        )
+        try:
+            response = self._inner.complete(
+                prompt, system=system, model=model, max_tokens=max_tokens
+            )
+        except Exception as exc:
+            resolved_model = model or getattr(self._inner, "_model", DEFAULT_MODEL)
+            self._manifest.record_llm_call(
+                {
+                    "client": self._inner.name,
+                    "model": resolved_model,
+                    "fingerprint": request_fingerprint(resolved_model, prompt, system),
+                    "prompt_chars": len(prompt),
+                    "system_chars": len(system),
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "cost_usd": 0.0,
+                    "status": "failed",
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                    **self._extra,
+                }
+            )
+            raise
         self._manifest.record_llm_call(
             {
                 "client": self._inner.name,
@@ -512,6 +532,7 @@ class ManifestLoggingClient:
                 "input_tokens": response.input_tokens,
                 "output_tokens": response.output_tokens,
                 "cost_usd": response.cost_usd,
+                "status": "ok",
                 **self._extra,
             }
         )

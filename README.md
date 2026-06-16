@@ -25,11 +25,13 @@ provide investment advice.
 conda env create -f environment.yml
 conda activate quantbench-crew
 
-# Create your local API-key file. Edit .env and paste only the keys you want
-# to use; leave the rest blank to keep those agents on offline fallbacks.
+# Create your local API-key file. For the default live workflow, set
+# OPENAI_API_KEY; leave provider-specific keys blank unless you switch to
+# llm.provider: per-agent.
 quantbench init
 
-# Run the deterministic offline workflow on two built-in sample papers.
+# Run the workflow on two built-in sample papers. With no key it remains
+# deterministic and offline; with OPENAI_API_KEY it uses the live LLM skills.
 quantbench run --source local --max-papers 2
 
 # Inspect the outputs.
@@ -40,8 +42,9 @@ find runs -name manifest.json
 pytest
 ```
 
-The dry workflow needs no network access or API keys. The generated `.env`
-file is ignored by git, so each user can keep their own provider keys locally.
+The workflow still needs no network access or API keys: missing credentials
+trigger recorded offline fallbacks. The generated `.env` file is ignored by
+git, so each user can keep their own provider keys locally.
 It writes:
 
 - `reports/<paper-slug>.md`: the human-readable review;
@@ -232,14 +235,14 @@ discovery runs through the source adapter in `tools/arxiv_tool.py`.
 
 | Skill | Default | Purpose |
 | --- | --- | --- |
-| `pdf_acquisition` | off | Cache an available paper PDF under `data/raw/` |
-| `question_identifier` | off | Extract the central question, field state, gap, and contribution |
-| `methodology_extractor` | off | Reconstruct equations, algorithms, settings, and baselines |
-| `empirical_spec_parser` | off | Parse datasets, features, labels, preprocessing, splits, and metrics |
-| `criticizer` | off | Separate assumptions, stated limitations, inferred threats, and open questions |
-| `method_spec_extraction` | off | Produce the implementable `MethodSpec` |
-| `target_table_extraction` | off | Convert quantitative headline claims into a `ReproductionTarget` |
-| `red_flag_scan` | off | Detect costs, tuning, survivorship, microcap, sample, and snooping risks |
+| `pdf_acquisition` | **on** | Cache an available paper PDF under `data/raw/` |
+| `question_identifier` | **on** | Extract the central question, field state, gap, and contribution |
+| `methodology_extractor` | **on** | Reconstruct equations, algorithms, settings, and baselines |
+| `empirical_spec_parser` | **on** | Parse datasets, features, labels, preprocessing, splits, and metrics |
+| `criticizer` | **on** | Separate assumptions, stated limitations, inferred threats, and open questions |
+| `method_spec_extraction` | **on** | Produce the implementable `MethodSpec` |
+| `target_table_extraction` | **on** | Convert quantitative headline claims into a `ReproductionTarget` |
+| `red_flag_scan` | **on** | Detect costs, tuning, survivorship, microcap, sample, and snooping risks |
 
 #### Coder Runtime Skills
 
@@ -253,8 +256,8 @@ discovery runs through the source adapter in `tools/arxiv_tool.py`.
 
 | Skill | Default | Purpose |
 | --- | --- | --- |
-| `dataset_registry` | off | Load, version, hash, and record the configured dataset |
-| `walk_forward` | off | Run purged and embargoed out-of-sample evaluation with baselines and costs |
+| `dataset_registry` | **on** | Load, version, hash, and record the configured dataset |
+| `walk_forward` | **on** | Run purged and embargoed out-of-sample evaluation with baselines and costs |
 | `strategy_evaluator` | off | Test declared signal and no-signal datasets against expected behavior |
 | `robustness_auditor` | off | Preserve a stress-test ledger across costs, parameters, paths, and datasets |
 
@@ -262,9 +265,9 @@ discovery runs through the source adapter in `tools/arxiv_tool.py`.
 
 | Skill | Default | Purpose |
 | --- | --- | --- |
-| `rubric_verdict` | off | Score reproducibility, robustness, costs, novelty, and data accessibility |
-| `claims_vs_results_analyzer` | off | Compare every extracted claim with achieved evidence |
-| `report_compiler` | off | Compile the comprehensive evidence-linked Markdown review |
+| `rubric_verdict` | **on** | Score reproducibility, robustness, costs, novelty, and data accessibility |
+| `claims_vs_results_analyzer` | **on** | Compare every extracted claim with achieved evidence |
+| `report_compiler` | **on** | Compile the comprehensive evidence-linked Markdown review |
 
 ### 2. Open-Format Agent Skills
 
@@ -337,7 +340,9 @@ Set `llm.skills_dir: ""` to disable core Agent Skill injection.
 Every LLM call routes through the provider-agnostic seam in
 [`src/quantbench_crew/llm.py`](src/quantbench_crew/llm.py).
 
-The shipped config uses per-agent providers:
+The shipped config uses `provider: openai`, so one `OPENAI_API_KEY` powers all
+runtime LLM calls. If you switch to `provider: per-agent`, the configured
+provider ports are:
 
 | Agent | Default provider | Environment variable |
 | --- | --- | --- |

@@ -98,6 +98,35 @@ def test_manifest_logging_records_model_tokens_cost() -> None:
     # Raw prompt text stays out of the manifest; only sizes are recorded.
     assert "prompt" not in entry
     assert entry["prompt_chars"] == 1
+    assert entry["status"] == "ok"
+
+
+def test_manifest_logging_records_failed_completion() -> None:
+    class FailingClient:
+        name = "failing"
+        _model = DEFAULT_MODEL
+
+        def available(self) -> bool:
+            return True
+
+        def complete(self, prompt, *, system="", model=None, max_tokens=4096):
+            raise OSError("rate limited")
+
+    manifest = _manifest()
+    client = ManifestLoggingClient(FailingClient(), manifest)
+
+    with pytest.raises(OSError, match="rate limited"):
+        client.complete("q", system="s")
+
+    assert len(manifest.llm_calls) == 1
+    entry = manifest.llm_calls[0]
+    assert entry["client"] == "failing"
+    assert entry["status"] == "failed"
+    assert entry["error_type"] == "OSError"
+    assert entry["error"] == "rate limited"
+    assert entry["prompt_chars"] == 1
+    assert entry["system_chars"] == 1
+    assert "prompt" not in entry
 
 
 class _FakeInnerClient:

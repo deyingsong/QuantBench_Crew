@@ -23,8 +23,8 @@ _LLM_KEY_ENVS = (
 def _no_live_llm_keys(monkeypatch: pytest.MonkeyPatch) -> None:
     """Strip provider keys so no test ever places a live LLM call.
 
-    The shipped config defaults to per-agent live backbones (and the coder's
-    code_generation skill is on by default), so tests that exercise default
+    The shipped config defaults to a live OpenAI backbone (and research
+    skills are on by default), so tests that exercise default
     configs would otherwise go live on any developer machine with keys
     exported. Tests that need a key set one explicitly via monkeypatch.
     """

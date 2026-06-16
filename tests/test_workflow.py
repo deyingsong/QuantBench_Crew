@@ -137,10 +137,14 @@ def _skills_enabled_config(tmp_path: Path) -> str:
     """Shipped config with the Workstream B and C skills toggled on."""
 
     config = load_config("configs/agents.yaml")
-    # Pin offline: the shipped default is per-agent live backbones, which
+    # Pin offline: the shipped default is a live OpenAI backbone, which
     # must never place network calls from tests even when keys are exported.
     config["llm"]["provider"] = "none"
     agents = config["agents"]
+    for agent in agents.values():
+        for skill in (agent.get("skills") or {}).values():
+            if isinstance(skill, dict) and "enabled" in skill:
+                skill["enabled"] = False
     agents["quant_scout"]["skills"]["reproducibility_triage"]["enabled"] = True
     agents["quant_scout"]["skills"]["charter_relevance"]["enabled"] = True
     for name in (
@@ -151,6 +155,7 @@ def _skills_enabled_config(tmp_path: Path) -> str:
     ):
         agents["quant_reader"]["skills"][name]["enabled"] = True
     agents["quant_coder"]["skills"]["code_generation"]["enabled"] = True
+    agents["quant_coder"]["skills"]["metric_synthesis"]["enabled"] = True
     agents["quant_bench"]["skills"]["dataset_registry"]["enabled"] = True
     agents["quant_bench"]["skills"]["walk_forward"]["enabled"] = True
     agents["quant_reviewer"]["skills"]["rubric_verdict"]["enabled"] = True
