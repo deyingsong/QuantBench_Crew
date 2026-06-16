@@ -361,6 +361,8 @@ def _markdown(
         "",
         "This report supports research review only and is not financial advice.",
         "",
+        "## Human proofreading notes",
+        "",
     ]
     return "\n".join(sections)
 
