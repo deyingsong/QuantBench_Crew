@@ -21,7 +21,11 @@ from quantbench_crew.skills.reviewer.claims_vs_results import (
 
 
 def _inputs():
-    paper = Paper(title="Auditable Alpha", abstract="Tests a cross-sectional signal.")
+    paper = Paper(
+        title="Auditable Alpha",
+        abstract="Tests a cross-sectional signal.",
+        url="https://example.org/auditable-alpha",
+    )
     reproduced = Claim(metric="sharpe", value=1.0, tolerance=0.2, source="Table 2")
     failed = Claim(metric="mean_return", value=0.02, tolerance=0.2, source="Table 3")
     unevaluated = Claim(metric="max_drawdown", value=-0.1, tolerance=0.2, source="Table 4")
@@ -151,6 +155,7 @@ def test_reviewer_compiles_comprehensive_markdown(make_ctx) -> None:
     assert report.claims_analysis is not None
     assert report.compilation is not None
     assert "## Claims Versus Reproduced Results" in markdown
+    assert "**Paper:** [Original paper](https://example.org/auditable-alpha)" in markdown
     assert "## Portfolio And Economic Interpretation" in markdown
     assert "## Expert Lens Review" in markdown
     assert "Lopez de Prado" in markdown

@@ -6,6 +6,7 @@ import pytest
 import yaml
 
 from quantbench_crew.config import load_config
+from quantbench_crew.models import Paper
 from quantbench_crew.main import run_workflow
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -87,6 +88,38 @@ def test_run_workflow_reads_local_json_source(tmp_path: Path) -> None:
 
     assert reports[0].paper.authors == ("Researcher D",)
     assert reports[0].paper.title == "Portfolio Forecasting with Transaction Costs"
+
+
+def test_run_workflow_warns_when_dedup_filters_everything(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seen = tmp_path / "seen.json"
+    seen.write_text('{"keys": ["doi:10.1/already-seen"]}\n', encoding="utf-8")
+    paper = Paper(title="Already Seen", abstract="", source="jf", raw={"doi": "10.1/already-seen"})
+    monkeypatch.setattr("quantbench_crew.main.search_venues", lambda *args, **kwargs: [paper])
+
+    args = Namespace(
+        source="jf",
+        query="asset pricing",
+        query_pool=None,
+        year=None,
+        max_papers=1,
+        paper_json=None,
+        agents_config="configs/agents.yaml",
+        benchmark_config="configs/benchmarks.yaml",
+        report_dir=str(tmp_path / "reports"),
+        write_reports=False,
+        runs_dir=str(tmp_path / "runs"),
+        processed_path=str(seen),
+        no_dedup=False,
+    )
+
+    reports = run_workflow(args)
+
+    assert reports == []
+    err = capsys.readouterr().err
+    assert "No new papers to review after deduplication" in err
+    assert "--no-dedup" in err
 
 
 def _run_args(tmp_path: Path, runs_subdir: str) -> Namespace:

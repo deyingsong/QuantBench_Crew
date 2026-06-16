@@ -313,6 +313,7 @@ def _markdown(
         f"# {report.paper.title}",
         "",
         f"**Source:** {report.paper.source}",
+        _paper_link_line(report),
         f"**Verdict:** {report.verdict}",
         "",
         "## Decision Summary",
@@ -362,6 +363,13 @@ def _markdown(
         "",
     ]
     return "\n".join(sections)
+
+
+def _paper_link_line(report: ReviewReport) -> str:
+    url = report.paper.url or str(report.paper.raw.get("pdf_url") or "").strip()
+    if not url:
+        return "**Paper:** Not available from source metadata"
+    return f"**Paper:** [Original paper]({url})"
 
 
 def _paper_thesis(report: ReviewReport) -> str:

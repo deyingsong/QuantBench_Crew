@@ -443,6 +443,7 @@ class ReviewReport:
                 f"# {self.paper.title}",
                 "",
                 f"**Source:** {self.paper.source}",
+                _paper_link_line(self.paper),
                 f"**Verdict:** {self.verdict}",
                 "",
                 "## Research Question",
@@ -489,6 +490,13 @@ def _metric_table(metrics: dict[str, float]) -> str:
     rows = ["| Metric | Value |", "| --- | ---: |"]
     rows.extend(f"| {name} | {value:.4f} |" for name, value in metrics.items())
     return "\n".join(rows)
+
+
+def _paper_link_line(paper: Paper) -> str:
+    url = paper.url or str(paper.raw.get("pdf_url") or "").strip()
+    if not url:
+        return "**Paper:** Not available from source metadata"
+    return f"**Paper:** [Original paper]({url})"
 
 
 def _rubric_table(rubric: tuple["RubricScore", ...]) -> str:

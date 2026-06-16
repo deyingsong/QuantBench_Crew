@@ -265,7 +265,15 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
 
     if args.source != "local" and not getattr(args, "no_dedup", False):
         registry = ProcessedRegistry(getattr(args, "processed_path", DEFAULT_PROCESSED_PATH))
+        discovered_count = len(papers)
         papers = registry.filter_unseen(papers)
+        if discovered_count and not papers:
+            print(
+                "No new papers to review after deduplication against "
+                f"{registry.path}. Use --no-dedup to rerun the same papers, "
+                "or pass --processed-path to use a fresh watermark.",
+                file=sys.stderr,
+            )
 
     agent_skills = {
         name: resolve_skills(name, agents_config)

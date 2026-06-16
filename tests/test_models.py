@@ -118,6 +118,33 @@ def test_existing_models_gain_additive_defaults() -> None:
     assert report.compilation is None
 
 
+def test_review_markdown_includes_original_paper_link() -> None:
+    paper = Paper(
+        title="Linked Paper",
+        abstract="A paper with a source URL.",
+        source="journal",
+        url="https://example.org/linked-paper",
+    )
+    report = ReviewReport(
+        paper=paper,
+        analysis=_analysis(paper),
+        implementation_plan=ImplementationPlan(
+            paper=paper,
+            modules=("method",),
+            assumptions=(),
+            tests=(),
+            open_questions=(),
+        ),
+        benchmark_result=BenchmarkResult(paper=paper, dataset="sample", metrics={}),
+        verdict="inconclusive",
+        strengths=(),
+        weaknesses=(),
+        open_questions=(),
+    )
+
+    assert "**Paper:** [Original paper](https://example.org/linked-paper)" in report.to_markdown()
+
+
 def test_reader_assessment_models_construct() -> None:
     evidence = (EvidenceLink(kind="paper_quote", reference="abstract"),)
 
