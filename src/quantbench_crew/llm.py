@@ -235,16 +235,34 @@ class AnthropicClient:
 
     name = "anthropic"
 
-    def __init__(self, model: str = DEFAULT_MODEL, api_key: str | None = None) -> None:
+    def __init__(
+        self,
+        model: str = DEFAULT_MODEL,
+        api_key: str | None = None,
+        api_key_env: str | None = None,
+    ) -> None:
         self._model = model
         self._api_key = api_key
+        self._key_envs = tuple(
+            env
+            for env in (
+                api_key_env or PROVIDER_DEFAULTS["anthropic"]["api_key_env"],
+                "ANTHROPIC_AUTH_TOKEN",
+            )
+            if env
+        )
+
+    def _resolve_key(self) -> str | None:
+        if self._api_key:
+            return self._api_key
+        for env in self._key_envs:
+            value = os.environ.get(env)
+            if value:
+                return value
+        return None
 
     def _credentials_present(self) -> bool:
-        return bool(
-            self._api_key
-            or os.environ.get("ANTHROPIC_API_KEY")
-            or os.environ.get("ANTHROPIC_AUTH_TOKEN")
-        )
+        return self._resolve_key() is not None
 
     def available(self) -> bool:
         if not self._credentials_present():
@@ -265,11 +283,13 @@ class AnthropicClient:
     ) -> LLMResponse:
         import anthropic
 
-        client = (
-            anthropic.Anthropic(api_key=self._api_key)
-            if self._api_key
-            else anthropic.Anthropic()
-        )
+        key = self._resolve_key()
+        if key is None:
+            raise OSError(
+                f"no API key for provider {self.name!r} "
+                f"(set one of: {', '.join(self._key_envs) or 'api_key'})"
+            )
+        client = anthropic.Anthropic(api_key=key)
         resolved_model = model or self._model
         request: dict[str, Any] = {
             "model": resolved_model,
@@ -679,7 +699,11 @@ def _single_client(
         fixtures = settings.get("fixtures", "tests/fixtures/llm_fixtures.json")
         return RecordedStubClient.from_path(fixtures, default_model=model)
     if provider == "anthropic":
-        return AnthropicClient(model=model, api_key=settings.get("api_key"))
+        return AnthropicClient(
+            model=model,
+            api_key=settings.get("api_key"),
+            api_key_env=settings.get("api_key_env"),
+        )
     if provider in PROVIDER_DEFAULTS:
         price = settings.get("price_per_mtok")
         return OpenAICompatibleClient(

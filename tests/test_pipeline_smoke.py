@@ -3,6 +3,26 @@ from pathlib import Path
 from quantbench_crew.main import build_parser, main
 
 
+def test_init_command_creates_env_file(tmp_path: Path, capsys) -> None:
+    template = tmp_path / ".env.example"
+    target = tmp_path / ".env"
+    template.write_text("OPENAI_API_KEY=\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "init",
+            "--template",
+            str(template),
+            "--env-file",
+            str(target),
+        ]
+    )
+
+    assert exit_code == 0
+    assert target.read_text(encoding="utf-8") == "OPENAI_API_KEY=\n"
+    assert "Created" in capsys.readouterr().out
+
+
 def test_pipeline_runs_and_writes_reports_by_default(tmp_path: Path, capsys) -> None:
     exit_code = main(
         [

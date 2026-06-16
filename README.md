@@ -25,6 +25,10 @@ provide investment advice.
 conda env create -f environment.yml
 conda activate quantbench-crew
 
+# Create your local API-key file. Edit .env and paste only the keys you want
+# to use; leave the rest blank to keep those agents on offline fallbacks.
+quantbench init
+
 # Run the deterministic offline workflow on two built-in sample papers.
 quantbench run --source local --max-papers 2
 
@@ -36,7 +40,9 @@ find runs -name manifest.json
 pytest
 ```
 
-The dry workflow needs no network access or API keys. It writes:
+The dry workflow needs no network access or API keys. The generated `.env`
+file is ignored by git, so each user can keep their own provider keys locally.
+It writes:
 
 - `reports/<paper-slug>.md`: the human-readable review;
 - `reports/<paper-slug>_strategy.py`: the selected generated strategy module;
@@ -355,7 +361,21 @@ Calls record provider, model, token counts, estimated cost, and request
 fingerprint in the manifest. A shared per-paper `cost_cap_usd` bounds live
 generation.
 
-Copy [`.env.example`](.env.example) to see the supported API-key ports.
+On a fresh checkout, run:
+
+```bash
+quantbench init
+```
+
+This copies [`.env.example`](.env.example) to `.env`. Add your own keys there
+before running live LLM-backed workflows. `quantbench run` and `quantbench
+track` load `.env` automatically; pass `--env-file path/to/file` to use a
+different secrets file. Leave any key blank to run that agent on its
+deterministic offline fallback.
+
+Advanced users can also override a provider's key variable in
+[`configs/agents.yaml`](configs/agents.yaml) with `api_key_env`, or provide a
+different OpenAI-compatible endpoint with `base_url`.
 
 ## Running Workflows
 

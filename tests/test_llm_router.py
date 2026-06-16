@@ -7,6 +7,7 @@ import pytest
 from quantbench_crew.artifacts import RunManifest, stable_hash
 from quantbench_crew.llm import (
     AGENT_NAMES,
+    AnthropicClient,
     DEFAULT_MODEL,
     ManifestLoggingClient,
     OpenAICompatibleClient,
@@ -122,6 +123,15 @@ def test_openai_compatible_reads_key_from_port_env(monkeypatch) -> None:
     # Alternate accepted env for gemini.
     monkeypatch.setenv("GOOGLE_API_KEY", "g-key")
     assert OpenAICompatibleClient("gemini", "gemini-2.5-pro").available() is True
+
+
+def test_anthropic_client_supports_custom_key_env(monkeypatch) -> None:
+    _clear_keys(monkeypatch)
+    monkeypatch.setenv("CLAUDE_API_KEY", "claude-port")
+
+    client = AnthropicClient("claude-opus-4-8", api_key_env="CLAUDE_API_KEY")
+
+    assert client._resolve_key() == "claude-port"
 
 
 def test_malformed_response_raises_value_error() -> None:

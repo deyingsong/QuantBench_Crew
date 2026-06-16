@@ -20,7 +20,7 @@ from quantbench_crew.agents import (
     QuantScoutAgent,
 )
 from quantbench_crew.artifacts import start_run
-from quantbench_crew.config import load_config
+from quantbench_crew.config import init_env_file, load_config, load_env_file
 from quantbench_crew.llm import build_llm_client
 from quantbench_crew.models import ReviewReport
 from quantbench_crew.skills import resolve_skills
@@ -62,6 +62,16 @@ def main(argv: list[str] | None = None) -> int:
     normalized_argv = _with_default_command(sys.argv[1:] if argv is None else argv)
     args = parser.parse_args(normalized_argv)
 
+    if args.command == "init":
+        env_path = init_env_file(args.env_file, template=args.template, force=args.force)
+        print(
+            f"Created {env_path}. Add your API keys there, then run "
+            "`quantbench run ...`. Leave keys blank to use offline fallbacks."
+        )
+        return 0
+
+    load_env_file(getattr(args, "env_file", ".env"))
+
     if args.command == "run":
         reports = run_workflow(args)
         for report in reports:
@@ -86,7 +96,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command")
 
+    init = subparsers.add_parser(
+        "init", help="Create a local .env file for API keys from .env.example."
+    )
+    init.add_argument(
+        "--env-file",
+        default=".env",
+        help="Path to create for local secrets and workflow defaults.",
+    )
+    init.add_argument(
+        "--template",
+        default=".env.example",
+        help="Template dotenv file to copy.",
+    )
+    init.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing env file.",
+    )
+
     run = subparsers.add_parser("run", help="Run the paper review workflow.")
+    run.add_argument(
+        "--env-file",
+        default=".env",
+        help="Load API keys and workflow defaults from this dotenv file.",
+    )
     run.add_argument(
         "--source",
         choices=("local", "arxiv", *VENUES, *VENUE_GROUPS),
@@ -167,6 +201,11 @@ def build_parser() -> argparse.ArgumentParser:
     track.add_argument("--paper-json", help="Local JSON records when --source local is assigned.")
     track.add_argument("--agents-config", default="configs/agents.yaml")
     track.add_argument("--queue-path", default=str(DEFAULT_QUEUE_PATH))
+    track.add_argument(
+        "--env-file",
+        default=".env",
+        help="Load API keys and workflow defaults from this dotenv file.",
+    )
 
     subparsers.add_parser(
         "queries", help="List the curated query pools usable with --query-pool."

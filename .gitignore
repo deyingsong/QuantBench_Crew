@@ -1,4 +1,7 @@
 google_paper/
+.env
+.env.*
+!.env.example
 runs/
 reports/
 data/raw/
