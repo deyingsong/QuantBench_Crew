@@ -62,6 +62,15 @@ llm:
       provider: openai            # GPT's balanced general reasoning
       model: gpt-5
 
+# Governed cross-session memory. Disabled by default so the historical dry
+# workflow remains byte-for-byte deterministic until an operator opts in with
+# `quantbench run --use-memory` or flips this flag. Only approved memories are
+# recalled; every recalled memory id/hash is added to the run manifest.
+memory:
+  enabled: false
+  path: data/quantbench_memory.sqlite3
+  recall_limit: 8
+
 agents:
   quant_scout:
     role: Paper discovery and relevance ranking

@@ -52,6 +52,25 @@ It writes:
 - `runs/<run-id>/manifest.json`: the reproducibility and trial ledger;
 - additional run artifacts under `runs/<run-id>/`.
 
+Reports contain a protected `Human proofreading notes` section. Notes inside
+its markers survive report regeneration and can be ingested into an
+approval-gated SQLite memory:
+
+```bash
+quantbench feedback ingest reports/<paper-slug>.md
+quantbench feedback list --status proposed
+quantbench feedback approve <feedback-id> --reviewer "expert name"
+
+quantbench run --use-memory
+quantbench memory consolidate --month 2026-06
+quantbench memory archive --older-than-days 90
+```
+
+Only approved memories can affect an agent. Their IDs and hashes are recorded
+in the run manifest. See
+[`docs/memory-and-feedback.md`](docs/memory-and-feedback.md) for scopes,
+governance, consolidation, archiving, and the verified Hermes adapter.
+
 For a deterministic fixture-driven paper:
 
 ```bash
@@ -216,8 +235,9 @@ toggled under `agents.<agent>.skills` in
 [`configs/agents.yaml`](configs/agents.yaml), and invoked by an owning agent.
 Every invocation records a `SkillResult` in the run manifest.
 
-Most runtime skills are disabled in the shipped config. `code_generation` and
-`metric_synthesis` are enabled by default and remain offline-safe.
+The shipped config enables the evidence-producing Reader, Coder, Bench, and
+Reviewer path shown below. Every enabled skill remains offline-safe through a
+deterministic fallback; optional expansion and stress-test skills stay off.
 
 #### Scout Runtime Skills
 

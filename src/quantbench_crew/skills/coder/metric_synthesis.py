@@ -146,7 +146,8 @@ class MetricSynthesisSkill:
                     break
                 try:
                     response = client.complete(
-                        build_metric_prompt(claim), system=SYSTEM_PROMPT
+                        build_metric_prompt(claim),
+                        system=ctx.augment_system_prompt("quant_coder", SYSTEM_PROMPT),
                     )
                 except Exception as exc:  # boundary: record and move on
                     notes.append(f"{metric_name}: generation failed: {exc!r}")

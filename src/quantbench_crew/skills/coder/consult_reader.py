@@ -206,7 +206,10 @@ class ConsultReaderSkill:
                 else:
                     try:
                         response = reader.complete(
-                            build_consult_prompt(analysis, gaps), system=SYSTEM_PROMPT
+                            build_consult_prompt(analysis, gaps),
+                            system=ctx.augment_system_prompt(
+                                "quant_reader", SYSTEM_PROMPT
+                            ),
                         )
                         parsed = extract_json_object(response.text) or {}
                         answers = {

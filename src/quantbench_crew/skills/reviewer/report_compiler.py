@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from quantbench_crew.artifacts import ArtifactStore
+from quantbench_crew.feedback import ensure_feedback_section
 from quantbench_crew.models import (
     ClaimsVsResultsAnalysis,
     EvidenceLink,
@@ -26,7 +27,11 @@ class ReportCompilerSkill:
     def run(self, ctx: RunContext, **inputs: Any) -> SkillResult:
         report: ReviewReport = inputs["report"]
         claims: ClaimsVsResultsAnalysis | None = inputs.get("claims_analysis")
-        compilation = compile_report(report, claims)
+        compilation = compile_report(
+            report,
+            claims,
+            paper_slug=report.paper.slug,
+        )
         payload = _compilation_dict(compilation)
         store = ArtifactStore(ctx.run_dir, ctx.manifest)
         markdown_artifact = "review/compiled_report.md"
@@ -49,7 +54,11 @@ class ReportCompilerSkill:
 
 
 def compile_report(
-    report: ReviewReport, claims: ClaimsVsResultsAnalysis | None = None
+    report: ReviewReport,
+    claims: ClaimsVsResultsAnalysis | None = None,
+    *,
+    run_id: str = "",
+    paper_slug: str = "",
 ) -> ReportCompilation:
     """Build the deterministic final report used by the Reviewer agent."""
 
@@ -61,15 +70,19 @@ def compile_report(
     open_questions = _open_questions(report, claims)
     evidence = _evidence(report, claims)
     executive_summary = _executive_summary(report, claims)
-    markdown = _markdown(
-        report,
-        claims,
-        executive_summary,
-        empirical,
-        expert_lenses,
-        strengths,
-        weaknesses,
-        open_questions,
+    markdown = ensure_feedback_section(
+        _markdown(
+            report,
+            claims,
+            executive_summary,
+            empirical,
+            expert_lenses,
+            strengths,
+            weaknesses,
+            open_questions,
+        ),
+        run_id=run_id,
+        paper_slug=paper_slug or report.paper.slug,
     )
     return ReportCompilation(
         executive_summary=executive_summary,

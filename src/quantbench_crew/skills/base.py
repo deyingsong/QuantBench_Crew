@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 if TYPE_CHECKING:
     from quantbench_crew.artifacts import RunManifest
     from quantbench_crew.llm import LLMClient
+    from quantbench_crew.memory import MemoryRecord, MemoryStore
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,23 @@ class RunContext:
     config: dict[str, Any]
     manifest: RunManifest
     llm: LLMClient | None = None
+    memory: MemoryStore | None = None
+    recalled_memories: dict[str, tuple[MemoryRecord, ...]] = field(default_factory=dict)
+
+    def guidance(self, agent: str) -> str:
+        """Return approved, provenance-labelled guidance recalled for an agent."""
+
+        from quantbench_crew.memory import memory_guidance
+
+        return memory_guidance(self.recalled_memories.get(agent, ()))
+
+    def augment_system_prompt(self, agent: str, system: str) -> str:
+        """Append approved memory to a system prompt without changing dry runs."""
+
+        guidance = self.guidance(agent)
+        if not guidance:
+            return system
+        return f"{system.rstrip()}\n\n{guidance}" if system else guidance
 
 
 def skill_settings(config: Mapping[str, Any], agent: str, name: str) -> dict[str, Any]:

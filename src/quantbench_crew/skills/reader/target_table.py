@@ -103,7 +103,10 @@ class TargetTableExtractionSkill:
         else:
             prompt = build_target_table_prompt(paper)
             try:
-                response = client.complete(prompt, system=SYSTEM_PROMPT)
+                response = client.complete(
+                    prompt,
+                    system=ctx.augment_system_prompt("quant_reader", SYSTEM_PROMPT),
+                )
                 candidate = extract_json_object(response.text)
                 errors = validate(candidate, TARGET_SCHEMA)
                 if errors:

@@ -1,5 +1,7 @@
+import json
 from pathlib import Path
 
+from quantbench_crew.feedback import FEEDBACK_START, ensure_feedback_section
 from quantbench_crew.main import build_parser, main
 
 
@@ -68,3 +70,77 @@ def test_write_reports_flag_defaults_true() -> None:
 
     args = build_parser().parse_args(["run", "--no-write-reports"])
     assert args.write_reports is False
+
+
+def test_memory_cli_remember_and_recall(tmp_path: Path, capsys) -> None:
+    database = tmp_path / "memory.sqlite3"
+
+    assert main(
+        [
+            "memory",
+            "remember",
+            "Use point-in-time data.",
+            "--db",
+            str(database),
+            "--kind",
+            "procedural",
+        ]
+    ) == 0
+    proposed = json.loads(capsys.readouterr().out)
+    assert proposed["status"] == "proposed"
+    assert main(
+        [
+            "memory",
+            "approve",
+            proposed["memory_id"],
+            "--db",
+            str(database),
+        ]
+    ) == 0
+    capsys.readouterr()
+    assert main(
+        [
+            "memory",
+            "recall",
+            "--db",
+            str(database),
+            "--agent",
+            "quant_reader",
+        ]
+    ) == 0
+
+    recalled = json.loads(capsys.readouterr().out)
+    assert recalled[0]["content"] == "Use point-in-time data."
+
+
+def test_feedback_cli_ingest_and_approve(tmp_path: Path, capsys) -> None:
+    database = tmp_path / "memory.sqlite3"
+    report_path = tmp_path / "paper.md"
+    report_path.write_text(
+        ensure_feedback_section("# Paper\n", paper_slug="paper").replace(
+            FEEDBACK_START + "\n",
+            FEEDBACK_START + "\nQuant_reader should verify sample dates.\n",
+        ),
+        encoding="utf-8",
+    )
+
+    assert main(
+        ["feedback", "ingest", str(report_path), "--db", str(database)]
+    ) == 0
+    ingested = json.loads(capsys.readouterr().out)
+    feedback_id = ingested[0]["feedback_id"]
+    assert ingested[0]["status"] == "proposed"
+
+    assert main(
+        [
+            "feedback",
+            "approve",
+            feedback_id,
+            "--db",
+            str(database),
+            "--reviewer",
+            "expert",
+        ]
+    ) == 0
+    approved = json.loads(capsys.readouterr().out)
+    assert approved["status"] == "approved"

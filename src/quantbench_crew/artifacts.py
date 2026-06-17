@@ -94,6 +94,8 @@ class RunManifest:
     config_hash: str
     skill_results: list[SkillResult] = field(default_factory=list)
     llm_calls: list[dict[str, Any]] = field(default_factory=list)
+    memory_reads: list[dict[str, Any]] = field(default_factory=list)
+    memory_writes: list[dict[str, Any]] = field(default_factory=list)
     seeds: dict[str, int] = field(default_factory=dict)
     artifacts: dict[str, str] = field(default_factory=dict)  # rel path -> sha256
 
@@ -102,6 +104,16 @@ class RunManifest:
 
     def record_llm_call(self, entry: dict[str, Any]) -> None:
         self.llm_calls.append(dict(entry))
+
+    def record_memory_read(self, entry: dict[str, Any]) -> None:
+        normalized = dict(entry)
+        if normalized not in self.memory_reads:
+            self.memory_reads.append(normalized)
+
+    def record_memory_write(self, entry: dict[str, Any]) -> None:
+        normalized = dict(entry)
+        if normalized not in self.memory_writes:
+            self.memory_writes.append(normalized)
 
     def record_seed(self, name: str, value: int) -> None:
         self.seeds[name] = int(value)
@@ -119,6 +131,8 @@ class RunManifest:
             "artifacts": dict(sorted(self.artifacts.items())),
             "skill_results": [asdict(result) for result in self.skill_results],
             "llm_calls": list(self.llm_calls),
+            "memory_reads": list(self.memory_reads),
+            "memory_writes": list(self.memory_writes),
         }
 
     def content_hash(self) -> str:

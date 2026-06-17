@@ -438,42 +438,47 @@ class ReviewReport:
 
         if self.compilation is not None:
             return self.compilation.markdown
-        return "\n".join(
-            [
-                f"# {self.paper.title}",
-                "",
-                f"**Source:** {self.paper.source}",
-                _paper_link_line(self.paper),
-                f"**Verdict:** {self.verdict}",
-                "",
-                "## Research Question",
-                self.analysis.research_question,
-                "",
-                "## Proposed Method",
-                self.analysis.proposed_method,
-                "",
-                "## Implementation Plan",
-                _bullet_list(self.implementation_plan.modules),
-                "",
-                "## Benchmark Metrics",
-                _metric_table(self.benchmark_result.metrics),
-                "",
-                "## Rubric",
-                _rubric_table(self.rubric),
-                "",
-                "## Strengths",
-                _bullet_list(self.strengths),
-                "",
-                "## Weaknesses",
-                _bullet_list(self.weaknesses),
-                "",
-                "## Open Questions",
-                _bullet_list(self.open_questions),
-                "",
-                "## Disclaimer",
-                "This report supports research review only and is not financial advice.",
-                "",
-            ]
+        from quantbench_crew.feedback import ensure_feedback_section
+
+        return ensure_feedback_section(
+            "\n".join(
+                [
+                    f"# {self.paper.title}",
+                    "",
+                    f"**Source:** {self.paper.source}",
+                    _paper_link_line(self.paper),
+                    f"**Verdict:** {self.verdict}",
+                    "",
+                    "## Research Question",
+                    self.analysis.research_question,
+                    "",
+                    "## Proposed Method",
+                    self.analysis.proposed_method,
+                    "",
+                    "## Implementation Plan",
+                    _bullet_list(self.implementation_plan.modules),
+                    "",
+                    "## Benchmark Metrics",
+                    _metric_table(self.benchmark_result.metrics),
+                    "",
+                    "## Rubric",
+                    _rubric_table(self.rubric),
+                    "",
+                    "## Strengths",
+                    _bullet_list(self.strengths),
+                    "",
+                    "## Weaknesses",
+                    _bullet_list(self.weaknesses),
+                    "",
+                    "## Open Questions",
+                    _bullet_list(self.open_questions),
+                    "",
+                    "## Disclaimer",
+                    "This report supports research review only and is not financial advice.",
+                    "",
+                ]
+            ),
+            paper_slug=self.paper.slug,
         )
 
 

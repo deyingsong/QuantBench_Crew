@@ -73,7 +73,10 @@ def run_component_extraction(
     else:
         prompt = build_component_prompt(prompt_name, analysis, full_text)
         try:
-            response = client.complete(prompt, system=system_prompt)
+            response = client.complete(
+                prompt,
+                system=ctx.augment_system_prompt("quant_reader", system_prompt),
+            )
             candidate = extract_json_object(response.text)
             errors = validate(candidate, schema)
             if errors:

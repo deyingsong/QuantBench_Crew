@@ -6,8 +6,10 @@ import pytest
 import yaml
 
 from quantbench_crew.config import load_config
+from quantbench_crew.feedback import FEEDBACK_START, extract_human_notes
 from quantbench_crew.models import Paper
 from quantbench_crew.main import run_workflow
+from quantbench_crew.memory import SQLiteMemoryStore
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -55,6 +57,37 @@ def test_write_reports_creates_markdown_and_strategy(tmp_path: Path) -> None:
     assert len(strategies) == 1
     assert "def build_strategy" in strategies[0].read_text(encoding="utf-8")
     assert reports  # workflow returned the same papers it wrote
+
+
+def test_write_reports_preserves_human_proofreading_notes(tmp_path: Path) -> None:
+    report_dir = tmp_path / "reports"
+    args = Namespace(
+        source="local",
+        query="asset pricing",
+        max_papers=1,
+        paper_json=None,
+        agents_config="configs/agents.yaml",
+        benchmark_config="configs/benchmarks.yaml",
+        report_dir=str(report_dir),
+        write_reports=True,
+        runs_dir=str(tmp_path / "runs-a"),
+    )
+    run_workflow(args)
+    report_path = next(report_dir.glob("*.md"))
+    report_path.write_text(
+        report_path.read_text(encoding="utf-8").replace(
+            FEEDBACK_START + "\n",
+            FEEDBACK_START + "\nHuman expert correction survives reruns.\n",
+        ),
+        encoding="utf-8",
+    )
+    args.runs_dir = str(tmp_path / "runs-b")
+
+    run_workflow(args)
+
+    assert extract_human_notes(report_path.read_text(encoding="utf-8")) == (
+        "Human expert correction survives reruns."
+    )
 
 
 def test_run_workflow_reads_local_json_source(tmp_path: Path) -> None:
@@ -164,6 +197,54 @@ def test_rerun_with_identical_inputs_has_identical_content_hash(tmp_path: Path) 
     second = _load_manifests(tmp_path / "runs-b")[0]
     assert first["run_id"] != second["run_id"]
     assert first["content_hash"] == second["content_hash"]
+
+
+def test_memory_enabled_run_records_scoped_recall(tmp_path: Path) -> None:
+    memory_path = tmp_path / "memory.sqlite3"
+    memory_store = SQLiteMemoryStore(memory_path)
+    memory = memory_store.remember(
+        "Always report whether results include transaction costs.",
+        kind="procedural",
+        scope="global",
+        status="approved",
+    )
+    config = load_config("configs/agents.yaml")
+    config["llm"]["provider"] = "none"
+    config["memory"] = {
+        "enabled": True,
+        "path": str(memory_path),
+        "recall_limit": 4,
+    }
+    config_path = tmp_path / "agents-memory.yaml"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    args = Namespace(
+        source="local",
+        query="asset pricing",
+        max_papers=1,
+        paper_json=None,
+        agents_config=str(config_path),
+        benchmark_config="configs/benchmarks.yaml",
+        report_dir=str(tmp_path / "reports"),
+        write_reports=False,
+        runs_dir=str(tmp_path / "runs"),
+        use_memory=None,
+        memory_db=None,
+    )
+
+    run_workflow(args)
+
+    manifest = _load_manifests(tmp_path / "runs")[0]
+    assert {item["memory_id"] for item in manifest["memory_reads"]} == {
+        memory.memory_id
+    }
+    assert {item["agent"] for item in manifest["memory_reads"]} == {
+        "quant_scout",
+        "quant_reader",
+        "quant_coder",
+        "quant_bench",
+        "quant_reviewer",
+    }
+    assert memory_store.inspect()["runs"] == 1
 
 
 def _skills_enabled_config(tmp_path: Path) -> str:

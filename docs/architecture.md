@@ -13,7 +13,11 @@ The first implementation is intentionally deterministic when optional packages o
 ## Data Flow
 
 ```text
-Paper source -> Scout -> Reader -> Coder -> Bench -> Reviewer -> Markdown report
+Approved memory -> RunContext -> Scout -> Reader -> Coder -> Bench -> Reviewer
+                                      ^                              |
+Paper source -------------------------+                              v
+                              Markdown report -> human notes -> approval
+                                                          -> persistent memory
 ```
 
 ## Design Constraints
@@ -22,6 +26,8 @@ Paper source -> Scout -> Reader -> Coder -> Bench -> Reviewer -> Markdown report
 - Reproducible configs and report artifacts.
 - Human-readable output at each stage.
 - Clear extension points for future paper ingestion and benchmarks.
+- Human feedback is immutable evidence before it becomes approved guidance.
+- Persistent memory is scoped, provenance-linked, and recorded in manifests.
 
 ## Further Reading
 

@@ -170,10 +170,11 @@ class CodeGenerationSkill:
                 adapter = "complete"
 
         def generate_source(prompt: str, feedback: str) -> str | None:
+            system_prompt = ctx.augment_system_prompt("quant_coder", SYSTEM_PROMPT)
             if agent_backend is not None:
-                return agent_backend.generate(prompt, SYSTEM_PROMPT, feedback)
+                return agent_backend.generate(prompt, system_prompt, feedback)
             if coder_llm is not None:
-                return coder_llm.complete(prompt, system=SYSTEM_PROMPT).text
+                return coder_llm.complete(prompt, system=system_prompt).text
             return None
 
         evaluations: dict[str, dict[str, Any]] = {}

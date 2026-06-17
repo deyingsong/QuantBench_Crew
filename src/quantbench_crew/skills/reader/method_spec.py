@@ -161,7 +161,10 @@ class MethodSpecExtractionSkill:
         else:
             prompt = build_method_spec_prompt(analysis, full_text)
             try:
-                response = client.complete(prompt, system=SYSTEM_PROMPT)
+                response = client.complete(
+                    prompt,
+                    system=ctx.augment_system_prompt("quant_reader", SYSTEM_PROMPT),
+                )
                 candidate = extract_json_object(response.text)
                 errors = validate(candidate, METHOD_SPEC_SCHEMA)
                 if errors:

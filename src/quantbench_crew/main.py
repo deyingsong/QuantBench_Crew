@@ -7,7 +7,7 @@ import json
 import sys
 from collections import Counter
 from collections.abc import Mapping
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -21,7 +21,17 @@ from quantbench_crew.agents import (
 )
 from quantbench_crew.artifacts import start_run
 from quantbench_crew.config import init_env_file, load_config, load_env_file
+from quantbench_crew.feedback import (
+    ingest_report_feedback,
+    merge_preserved_feedback,
+    report_metadata,
+)
 from quantbench_crew.llm import build_llm_client
+from quantbench_crew.memory import (
+    DEFAULT_ARCHIVE_DIR,
+    DEFAULT_MEMORY_PATH,
+    SQLiteMemoryStore,
+)
 from quantbench_crew.models import ReviewReport
 from quantbench_crew.skills import resolve_skills
 from quantbench_crew.skills.base import RunContext
@@ -84,6 +94,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "track":
         print(json.dumps(track_new_papers(args), indent=2, sort_keys=True))
         return 0
+    if args.command == "feedback":
+        return _run_feedback_command(args)
+    if args.command == "memory":
+        return _run_memory_command(args)
 
     parser.print_help()
     return 0
@@ -178,6 +192,20 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable dedup against already-processed papers (arxiv source).",
     )
+    run.add_argument(
+        "--use-memory",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Enable approved persistent-memory recall for this run. When omitted, "
+            "the top-level memory.enabled setting in agents.yaml is used."
+        ),
+    )
+    run.add_argument(
+        "--memory-db",
+        default=None,
+        help="SQLite memory database path (defaults to config or data/quantbench_memory.sqlite3).",
+    )
 
     track = subparsers.add_parser(
         "track", help="Find papers in an exact online-date window and update Scout's queue."
@@ -210,6 +238,109 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "queries", help="List the curated query pools usable with --query-pool."
     )
+
+    feedback = subparsers.add_parser(
+        "feedback", help="Ingest and govern human proofreading notes."
+    )
+    feedback_sub = feedback.add_subparsers(dest="feedback_command", required=True)
+    feedback_ingest = feedback_sub.add_parser(
+        "ingest", help="Extract notes from one or more Markdown reports."
+    )
+    feedback_ingest.add_argument("reports", nargs="+")
+    feedback_ingest.add_argument("--db", default=str(DEFAULT_MEMORY_PATH))
+    feedback_ingest.add_argument(
+        "--category",
+        choices=("factual_correction", "method_gap", "bug", "style", "process_guidance"),
+        default="",
+    )
+    feedback_ingest.add_argument(
+        "--scope", choices=("global", "agent", "paper", "agent_paper"), default=""
+    )
+    feedback_ingest.add_argument("--scope-key", default="")
+    feedback_ingest.add_argument("--agent", choices=(
+        "quant_scout",
+        "quant_reader",
+        "quant_coder",
+        "quant_bench",
+        "quant_reviewer",
+    ), default="")
+
+    feedback_list = feedback_sub.add_parser("list", help="List feedback records.")
+    feedback_list.add_argument("--db", default=str(DEFAULT_MEMORY_PATH))
+    feedback_list.add_argument(
+        "--status", choices=("new", "proposed", "approved", "rejected"), default=""
+    )
+
+    feedback_approve = feedback_sub.add_parser(
+        "approve", help="Approve feedback and promote it into active memory."
+    )
+    feedback_approve.add_argument("feedback_id")
+    feedback_approve.add_argument("--db", default=str(DEFAULT_MEMORY_PATH))
+    feedback_approve.add_argument("--reviewer", default="")
+    feedback_approve.add_argument("--importance", type=float, default=0.8)
+
+    feedback_reject = feedback_sub.add_parser(
+        "reject", help="Reject a proposed feedback record."
+    )
+    feedback_reject.add_argument("feedback_id")
+    feedback_reject.add_argument("--db", default=str(DEFAULT_MEMORY_PATH))
+    feedback_reject.add_argument("--reviewer", default="")
+
+    memory = subparsers.add_parser(
+        "memory", help="Inspect and maintain persistent agent memory."
+    )
+    memory_sub = memory.add_subparsers(dest="memory_command", required=True)
+    memory_inspect = memory_sub.add_parser("inspect", help="Show database counts.")
+    memory_inspect.add_argument("--db", default=str(DEFAULT_MEMORY_PATH))
+
+    memory_add = memory_sub.add_parser("remember", help="Add an explicit memory record.")
+    memory_add.add_argument("content")
+    memory_add.add_argument("--db", default=str(DEFAULT_MEMORY_PATH))
+    memory_add.add_argument(
+        "--kind", choices=("episodic", "semantic", "procedural", "prospective"),
+        default="semantic",
+    )
+    memory_add.add_argument(
+        "--scope", choices=("global", "agent", "paper", "agent_paper"), default="global"
+    )
+    memory_add.add_argument("--scope-key", default="")
+    memory_add.add_argument(
+        "--status", choices=("proposed", "approved"), default="proposed"
+    )
+    memory_add.add_argument("--importance", type=float, default=0.5)
+    memory_add.add_argument("--tag", action="append", default=[])
+
+    memory_approve = memory_sub.add_parser(
+        "approve", help="Promote a proposed memory into active recall."
+    )
+    memory_approve.add_argument("memory_id")
+    memory_approve.add_argument("--db", default=str(DEFAULT_MEMORY_PATH))
+
+    memory_recall = memory_sub.add_parser("recall", help="Preview scoped approved recall.")
+    memory_recall.add_argument("--db", default=str(DEFAULT_MEMORY_PATH))
+    memory_recall.add_argument("--agent", required=True, choices=(
+        "quant_scout",
+        "quant_reader",
+        "quant_coder",
+        "quant_bench",
+        "quant_reviewer",
+    ))
+    memory_recall.add_argument("--paper-slug", default="")
+    memory_recall.add_argument("--query", default="")
+    memory_recall.add_argument("--limit", type=int, default=8)
+
+    memory_consolidate = memory_sub.add_parser(
+        "consolidate", help="Create a deterministic monthly consolidation digest."
+    )
+    memory_consolidate.add_argument("--db", default=str(DEFAULT_MEMORY_PATH))
+    memory_consolidate.add_argument("--month", required=True, help="Month in YYYY-MM form.")
+
+    memory_archive = memory_sub.add_parser(
+        "archive", help="Archive cold events and inactive memories."
+    )
+    memory_archive.add_argument("--db", default=str(DEFAULT_MEMORY_PATH))
+    memory_archive.add_argument("--older-than-days", type=int, default=90)
+    memory_archive.add_argument("--archive-dir", default=str(DEFAULT_ARCHIVE_DIR))
     return parser
 
 
@@ -306,6 +437,25 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
     # Volatile inputs (timestamps, run ids) stay out of this hash so reruns
     # on identical inputs produce identical manifest content hashes.
     run_config = {"agents": agents_config, "benchmarks": benchmark_config}
+    memory_config = agents_config.get("memory") or {}
+    requested_memory = getattr(args, "use_memory", None)
+    memory_enabled = (
+        bool(memory_config.get("enabled", False))
+        if requested_memory is None
+        else bool(requested_memory)
+    )
+    memory_path = (
+        getattr(args, "memory_db", None)
+        or memory_config.get("path")
+        or str(DEFAULT_MEMORY_PATH)
+    )
+    memory_store = SQLiteMemoryStore(memory_path) if memory_enabled else None
+    if memory_store is not None:
+        run_config["memory"] = {
+            "enabled": True,
+            "path": str(memory_path),
+            "recall_limit": int(memory_config.get("recall_limit", 8)),
+        }
 
     reports: list[ReviewReport] = []
     strategy_sources: dict[str, str] = {}
@@ -315,12 +465,38 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         manifest = store = None
         if runs_dir:
             manifest, store = start_run(Path(runs_dir), scored.paper.slug, run_config)
+            recalled = {}
+            if memory_store is not None:
+                memory_store.record_run_started(manifest)
+                recall_query = f"{scored.paper.title} {scored.paper.abstract}"
+                recall_limit = int(memory_config.get("recall_limit", 8))
+                for agent_name in agent_skills:
+                    memories = memory_store.retrieve(
+                        agent=agent_name,
+                        paper_slug=scored.paper.slug,
+                        query=recall_query,
+                        limit=recall_limit,
+                    )
+                    recalled[agent_name] = memories
+                    for memory in memories:
+                        manifest.record_memory_read(
+                            {
+                                "agent": agent_name,
+                                "memory_id": memory.memory_id,
+                                "content_hash": memory.content_hash,
+                                "kind": memory.kind,
+                                "scope": memory.scope,
+                                "scope_key": memory.scope_key,
+                            }
+                        )
             ctx = RunContext(
                 run_id=manifest.run_id,
                 run_dir=store.run_dir,
                 config=agents_config,
                 manifest=manifest,
                 llm=build_llm_client(agents_config, manifest),
+                memory=memory_store,
+                recalled_memories=recalled,
             )
 
         triage = scout.triage(scored, ctx)
@@ -329,6 +505,8 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
             # part of the trial record, not something to discard silently.
             if manifest is not None and store is not None:
                 manifest.save(store.run_dir)
+                if memory_store is not None:
+                    memory_store.record_manifest(manifest, status="gated")
             continue
 
         scout.record_relevance(scored, ctx)
@@ -356,8 +534,11 @@ def run_workflow(args: argparse.Namespace) -> list[ReviewReport]:
         reports.append(report)
 
         if manifest is not None and store is not None:
-            store.write_text("report.md", report.to_markdown())
+            report_markdown = report.to_markdown()
+            store.write_text("report.md", report_markdown)
             manifest.save(store.run_dir)
+            if memory_store is not None:
+                memory_store.record_manifest(manifest)
 
     if registry is not None:
         # Every ranked paper has now been looked at (processed or gated);
@@ -523,10 +704,104 @@ def write_reports(
     for report in reports:
         slug = report.paper.slug
         path = report_dir / f"{slug}.md"
-        path.write_text(report.to_markdown(), encoding="utf-8")
+        markdown = report.to_markdown()
+        metadata = report_metadata(markdown)
+        if path.exists():
+            markdown = merge_preserved_feedback(
+                markdown,
+                path.read_text(encoding="utf-8"),
+                run_id=metadata.get("run_id", ""),
+                paper_slug=metadata.get("paper_slug", slug),
+            )
+        path.write_text(markdown, encoding="utf-8")
         source = (strategy_sources or {}).get(slug)
         if source:
             (report_dir / f"{slug}_strategy.py").write_text(source, encoding="utf-8")
+
+
+def _run_feedback_command(args: argparse.Namespace) -> int:
+    store = SQLiteMemoryStore(args.db)
+    if args.feedback_command == "ingest":
+        results = []
+        for report in args.reports:
+            record, created = ingest_report_feedback(
+                report,
+                store,
+                category=args.category,
+                scope=args.scope,
+                scope_key=args.scope_key,
+                target_agent=args.agent,
+            )
+            results.append({**asdict(record), "created": created})
+        print(json.dumps(results, indent=2, sort_keys=True))
+        return 0
+    if args.feedback_command == "list":
+        print(
+            json.dumps(
+                [asdict(item) for item in store.list_feedback(status=args.status)],
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+    if args.feedback_command == "approve":
+        memory = store.approve_feedback(
+            args.feedback_id,
+            reviewer=args.reviewer,
+            importance=args.importance,
+        )
+        print(json.dumps(asdict(memory), indent=2, sort_keys=True))
+        return 0
+    if args.feedback_command == "reject":
+        store.reject_feedback(args.feedback_id, reviewer=args.reviewer)
+        print(json.dumps({"feedback_id": args.feedback_id, "status": "rejected"}))
+        return 0
+    raise ValueError(f"unknown feedback command: {args.feedback_command}")
+
+
+def _run_memory_command(args: argparse.Namespace) -> int:
+    store = SQLiteMemoryStore(args.db)
+    if args.memory_command == "inspect":
+        print(json.dumps(store.inspect(), indent=2, sort_keys=True))
+        return 0
+    if args.memory_command == "remember":
+        memory = store.remember(
+            args.content,
+            kind=args.kind,
+            scope=args.scope,
+            scope_key=args.scope_key,
+            status=args.status,
+            importance=args.importance,
+            tags=args.tag,
+            source_type="operator",
+        )
+        print(json.dumps(asdict(memory), indent=2, sort_keys=True))
+        return 0
+    if args.memory_command == "approve":
+        memory = store.set_memory_status(args.memory_id, "approved")
+        print(json.dumps(asdict(memory), indent=2, sort_keys=True))
+        return 0
+    if args.memory_command == "recall":
+        memories = store.retrieve(
+            agent=args.agent,
+            paper_slug=args.paper_slug,
+            query=args.query,
+            limit=args.limit,
+        )
+        print(json.dumps([asdict(item) for item in memories], indent=2, sort_keys=True))
+        return 0
+    if args.memory_command == "consolidate":
+        result = store.consolidate_month(args.month)
+        print(json.dumps(asdict(result), indent=2, sort_keys=True))
+        return 0
+    if args.memory_command == "archive":
+        result = store.archive_older_than(
+            args.older_than_days,
+            archive_dir=args.archive_dir,
+        )
+        print(json.dumps(asdict(result), indent=2, sort_keys=True))
+        return 0
+    raise ValueError(f"unknown memory command: {args.memory_command}")
 
 
 if __name__ == "__main__":

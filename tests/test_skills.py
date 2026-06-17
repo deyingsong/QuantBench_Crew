@@ -134,19 +134,36 @@ def test_fallback_cycle_raises() -> None:
         registry.resolve("quant_scout", _config("quant_scout", {"a": {"enabled": True}}))
 
 
-def test_shipped_config_resolves_only_code_generation() -> None:
-    # The shipped config keeps every skill disabled — the dry workflow stays
-    # the baseline — with one deliberate exception: code_generation is on by
-    # default so reports ship a generated <slug>_strategy.py, and its
-    # deterministic reference-template fallback keeps it offline-safe.
+def test_shipped_config_resolves_documented_default_pipeline() -> None:
+    # The shipped config enables the evidence-producing Reader -> Coder ->
+    # Bench -> Reviewer path. Every enabled skill retains a deterministic
+    # offline fallback, so the same pipeline remains runnable without keys.
     from quantbench_crew.config import load_config
 
     config = load_config("configs/agents.yaml")
-    for agent in ("quant_scout", "quant_reader", "quant_bench", "quant_reviewer"):
-        assert default_registry.resolve(agent, config) == {}
+    assert default_registry.resolve("quant_scout", config) == {}
+    assert sorted(default_registry.resolve("quant_reader", config)) == [
+        "criticizer",
+        "empirical_spec_parser",
+        "method_spec_extraction",
+        "methodology_extractor",
+        "pdf_acquisition",
+        "question_identifier",
+        "red_flag_scan",
+        "target_table_extraction",
+    ]
     assert sorted(default_registry.resolve("quant_coder", config)) == [
         "code_generation",
         "metric_synthesis",
+    ]
+    assert sorted(default_registry.resolve("quant_bench", config)) == [
+        "dataset_registry",
+        "walk_forward",
+    ]
+    assert sorted(default_registry.resolve("quant_reviewer", config)) == [
+        "claims_vs_results_analyzer",
+        "report_compiler",
+        "rubric_verdict",
     ]
 
 
