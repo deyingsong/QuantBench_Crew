@@ -5,18 +5,16 @@ finance papers, reconstructing their methods and claims, generating auditable
 implementation artifacts, benchmarking strategies, and issuing evidence-linked
 research verdicts.
 
-The project is built around statistical honesty:
+The project features:
 
-- preserve the paper's exact claim and implementation uncertainty;
-- keep temporal and point-in-time data discipline explicit;
-- count generated candidates, baselines, seeds, and discarded trials;
-- evaluate out of sample, net of costs, against simple and random nulls;
-- deflate headline Sharpe ratios for selection bias;
-- refuse confident conclusions when the evidence is placeholder, incomplete,
-  or not reproducible.
+- preserving the paper's exact claim and implementation uncertainty;
+- keeping temporal and point-in-time data discipline explicit;
+- counting generated candidates, baselines, seeds, and discarded trials;
+- evaluating out of sample, net of costs, against simple and random nulls;
+- deflating headline Sharpe ratios for selection bias;
+- refusing confident conclusions when the evidence is placeholder, incomplete, or not reproducible.
 
-QuantBench Crew supports research review only. It does not execute trades or
-provide investment advice.
+QuantBench Crew supports research review only. It does not execute trades or provide investment advice.
 
 ## Quick Start
 
@@ -720,8 +718,7 @@ tests/                      unit, integration, end-to-end, and eval tests
 - [`docs/coder-skills.md`](docs/coder-skills.md): Coder skill family
 - [`docs/architecture.md`](docs/architecture.md): concise architecture note
 - [`docs/skills-design.md`](docs/skills-design.md): runtime skill design
-- [`docs/phase2-design.md`](docs/phase2-design.md): Phase 2 design and findings
-- [`docs/phase2-status.md`](docs/phase2-status.md): implementation status
+
 
 ## Disclaimer
 
