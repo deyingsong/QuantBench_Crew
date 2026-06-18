@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sys
+import logging
 import time
 import urllib.parse
 import urllib.request
@@ -21,6 +21,8 @@ from datetime import date
 from pathlib import Path
 
 from quantbench_crew.models import Paper
+
+logger = logging.getLogger(__name__)
 
 ARXIV_API_URL = "https://export.arxiv.org/api/query"
 
@@ -97,13 +99,13 @@ def search_arxiv(
             page = _parse_arxiv_feed(payload.decode("utf-8"))
         except (OSError, ValueError, ET.ParseError) as exc:
             if not papers:
-                print(
-                    f"warning: live arXiv search failed ({exc!r}); "
-                    "using deterministic offline placeholder records",
-                    file=sys.stderr,
+                logger.warning(
+                    "live arXiv search failed (%r); using deterministic offline "
+                    "placeholder records",
+                    exc,
                 )
                 return placeholder_arxiv_papers(query, max_results)
-            print(f"warning: arXiv page fetch failed ({exc!r}); returning partial results", file=sys.stderr)
+            logger.warning("arXiv page fetch failed (%r); returning partial results", exc)
             break
 
         if not page:
@@ -146,10 +148,10 @@ def cache_pdf(
     try:
         payload = (fetcher or _http_get)(pdf_url)
     except OSError as exc:
-        print(f"warning: PDF download failed for {pdf_url} ({exc!r})", file=sys.stderr)
+        logger.warning("PDF download failed for %s (%r)", pdf_url, exc)
         return None
     if not payload.startswith(b"%PDF"):
-        print(f"warning: {pdf_url} did not return a PDF; not caching", file=sys.stderr)
+        logger.warning("%s did not return a PDF; not caching", pdf_url)
         return None
 
     target.parent.mkdir(parents=True, exist_ok=True)

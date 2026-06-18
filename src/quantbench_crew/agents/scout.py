@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from dataclasses import replace
 
 from quantbench_crew.models import Paper, RelevanceAssessment, ResearchCharter, ScoredPaper
 from quantbench_crew.skills.base import RunContext, Skill, SkillResult

@@ -6,7 +6,7 @@ from typing import Any
 
 from quantbench_crew.artifacts import ArtifactStore, stable_hash
 from quantbench_crew.datasets.registry import LoadedDataset
-from quantbench_crew.models import ExperimentResult, RobustnessAudit
+from quantbench_crew.models import RobustnessAudit
 from quantbench_crew.skills import register_skill
 from quantbench_crew.skills.base import RunContext, SkillResult, skill_settings
 from quantbench_crew.skills.bench.strategy_evaluator import experiment_result_from_dict

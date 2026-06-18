@@ -19,14 +19,16 @@ the arXiv source, so the workflow always runs.
 
 from __future__ import annotations
 
+import logging
 import os
-import sys
 import urllib.parse
 from datetime import date
 from typing import Any
 
 from quantbench_crew.models import Paper
 from quantbench_crew.tools.arxiv_tool import Fetcher, _http_get
+
+logger = logging.getLogger(__name__)
 
 DBLP_API_URL = "https://dblp.org/search/publ/api"
 OPENALEX_WORKS_URL = "https://api.openalex.org/works"
@@ -76,10 +78,11 @@ def search_venue(
             )
         return _search_dblp_conference(spec, venue, query, max_results, fetch, year)
     except (OSError, ValueError, KeyError) as exc:
-        print(
-            f"warning: live {venue} search failed ({exc!r}); "
-            "using deterministic offline placeholder records",
-            file=sys.stderr,
+        logger.warning(
+            "live %s search failed (%r); using deterministic offline "
+            "placeholder records",
+            venue,
+            exc,
         )
         return placeholder_venue_papers(venue, query, max_results)
 
@@ -245,7 +248,7 @@ def _enrich_with_openalex(papers: list[Paper], fetch: Fetcher) -> list[Paper]:
     try:
         results = _json(fetch(url)).get("results") or []
     except (OSError, ValueError) as exc:
-        print(f"warning: OpenAlex enrichment failed ({exc!r})", file=sys.stderr)
+        logger.warning("OpenAlex enrichment failed (%r)", exc)
         return papers
 
     by_doi = {

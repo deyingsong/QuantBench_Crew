@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from pathlib import Path
 
@@ -44,15 +45,16 @@ def test_search_arxiv_truncates_to_max_results() -> None:
     assert len(papers) == 1
 
 
-def test_search_arxiv_falls_back_offline(capsys) -> None:
+def test_search_arxiv_falls_back_offline(caplog) -> None:
     def failing_fetcher(url: str) -> bytes:
         raise OSError("network unreachable")
 
-    papers = search_arxiv("momentum", max_results=3, fetcher=failing_fetcher)
+    with caplog.at_level(logging.WARNING):
+        papers = search_arxiv("momentum", max_results=3, fetcher=failing_fetcher)
 
     assert len(papers) == 3
     assert all(paper.source == "arxiv-placeholder" for paper in papers)
-    assert "warning" in capsys.readouterr().err
+    assert "live arXiv search failed" in caplog.text
 
 
 def test_cache_pdf_downloads_and_reuses_cache(tmp_path: Path) -> None:
@@ -77,14 +79,15 @@ def test_cache_pdf_downloads_and_reuses_cache(tmp_path: Path) -> None:
     assert second == first
 
 
-def test_cache_pdf_rejects_non_pdf_responses(tmp_path: Path, capsys) -> None:
+def test_cache_pdf_rejects_non_pdf_responses(tmp_path: Path, caplog) -> None:
     paper = search_arxiv("momentum", fetcher=lambda url: FEED.encode("utf-8"))[0]
 
-    result = cache_pdf(paper, cache_dir=tmp_path, fetcher=lambda url: b"<html>error</html>")
+    with caplog.at_level(logging.WARNING):
+        result = cache_pdf(paper, cache_dir=tmp_path, fetcher=lambda url: b"<html>error</html>")
 
     assert result is None
     assert list(tmp_path.iterdir()) == []
-    assert "did not return a PDF" in capsys.readouterr().err
+    assert "did not return a PDF" in caplog.text
 
 
 def test_cache_pdf_returns_none_without_url(tmp_path: Path) -> None:

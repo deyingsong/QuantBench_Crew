@@ -19,11 +19,11 @@ No look-ahead: a month's cell is built only from that month's daily rows;
 from __future__ import annotations
 
 import csv
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 from math import sqrt
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Iterable, Mapping
 
 from quantbench_crew.benchmarks.contract import PanelData
 
