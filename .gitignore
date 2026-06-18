@@ -19,3 +19,4 @@ dist/
 youtube_cookies*.txt
 Source_data/
 docs/build_history/
+scripts/notebooklm_md.py
